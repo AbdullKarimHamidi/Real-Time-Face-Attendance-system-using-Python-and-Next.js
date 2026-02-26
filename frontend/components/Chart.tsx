@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Pie, PieChart, Sector, Label, ResponsiveContainer } from "recharts"
-import { type PieSectorDataItem } from "recharts/types/polar/Pie"
+import { PieSectorDataItem } from "recharts/types/polar/Pie"
 
 import { Card } from "@/components/ui/card"
 import {
@@ -10,7 +10,7 @@ import {
   ChartStyle,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
+  ChartConfig,
 } from "@/components/ui/chart"
 import {
   Select,
@@ -20,12 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const desktopData = [
-  { month: "january", desktop: 186 },
-  { month: "february", desktop: 305 },
-  { month: "march", desktop: 237 },
-  { month: "april", desktop: 173 },
-  { month: "may", desktop: 209 },
+const data = [
+  { month: "january", value: 186 },
+  { month: "february", value: 305 },
+  { month: "march", value: 237 },
+  { month: "april", value: 173 },
+  { month: "may", value: 209 },
 ]
 
 const chartConfig = {
@@ -37,82 +37,90 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function ChartPieInteractive() {
-  const id = "pie-interactive"
-  const [activeMonth, setActiveMonth] = React.useState(desktopData[0].month)
+  const id = "pie-beautiful"
+  const [activeMonth, setActiveMonth] = React.useState(data[0].month)
 
-  const activeIndex = desktopData.findIndex(
-    (item) => item.month === activeMonth
-  )
+  const activeIndex = data.findIndex(d => d.month === activeMonth)
+  const activeValue = data[activeIndex].value
 
   return (
-    <Card className="relative h-50 w-60 overflow-hidden">
+    <Card className="relative w-[320px] h-[260px] rounded-2xl p-4 shadow-md">
       <ChartStyle id={id} config={chartConfig} />
 
-      {/* 🔹 TOP LEFT TITLE */}
-      <div className="absolute top-2 left-2 text-xs font-medium">
-        Visitors
-      </div>
+      {/* ===== HEADER ===== */}
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h3 className="text-sm font-semibold">Visitors</h3>
+          <p className="text-xs text-muted-foreground">
+            Monthly overview
+          </p>
+        </div>
 
-      {/* 🔹 TOP RIGHT SELECT */}
-      <div className="absolute top-2 right-2">
         <Select value={activeMonth} onValueChange={setActiveMonth}>
-          <SelectTrigger className="h-6 w-28 text-xs">
+          <SelectTrigger className="h-7 w-[110px] text-xs rounded-lg">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {desktopData.map((item) => (
+            {data.map(item => (
               <SelectItem key={item.month} value={item.month}>
-                {item.month}
+                {chartConfig[item.month].label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* 🔹 CENTER CHART (FITS EXACTLY) */}
-      <div className="absolute inset-0 pt-8">
-        <ChartContainer id={id} config={chartConfig} className="h-full w-full">
+      {/* ===== CHART ===== */}
+      <div className="flex-1 flex items-center justify-center">
+        <ChartContainer
+          id={id}
+          config={chartConfig}
+          className="h-full w-full"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent hideLabel />}
+                content={<ChartTooltipContent />}
               />
+
               <Pie
-                data={desktopData}
-                dataKey="desktop"
+                data={data}
+                dataKey="value"
                 nameKey="month"
-                innerRadius={35}
-                outerRadius={60}
-                strokeWidth={3}
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={3}
                 activeIndex={activeIndex}
                 activeShape={(props: PieSectorDataItem) => (
-                  <Sector {...props} outerRadius={props.outerRadius! + 5} />
+                  <Sector
+                    {...props}
+                    outerRadius={props.outerRadius! + 8}
+                  />
                 )}
               >
                 <Label
                   content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
+                    if (!viewBox || !("cx" in viewBox)) return null
+                    return (
+                      <text
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                      >
+                        <tspan className="fill-foreground text-2xl font-bold">
+                          {activeValue}
+                        </tspan>
+                        <tspan
                           x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
+                          y={(viewBox.cy || 0) + 18}
+                          className="fill-muted-foreground text-xs"
                         >
-                          <tspan className="fill-foreground text-lg font-bold">
-                            {desktopData[activeIndex].desktop}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 14}
-                            className="fill-muted-foreground text-[10px]"
-                          >
-                            Visitors
-                          </tspan>
-                        </text>
-                      )
-                    }
+                          Visitors
+                        </tspan>
+                      </text>
+                    )
                   }}
                 />
               </Pie>

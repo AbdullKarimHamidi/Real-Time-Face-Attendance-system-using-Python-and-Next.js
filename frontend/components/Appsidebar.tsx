@@ -21,6 +21,8 @@ import {
   Settings,
   AlertCircleIcon,
   Camera,
+  CameraOffIcon,
+  SwitchCamera,
 } from "lucide-react"
 
 import Image from "next/image"
@@ -36,11 +38,13 @@ import {
 
 const dashboarddata = [
   { name: "Dashboard", icon: LayoutDashboard, link: "/dashboard" },
-  { name: "Live Attendance", icon: UserCheck, link: "/live" },
+  { name: "Live Camera Monitor", icon: UserCheck, link: "/Live_attendance" },
   { name: "Engineers", icon: Users, link: "/eng" },
   { name: "Reports", icon: Book, link: "/reports" },
   { name: "Intrusion", icon: AlertCircleIcon, link: "/intrusion" },
   { name: "Snapshots", icon: Camera, link: "/snapshots" },
+  {name:'Add Employee',icon:UserCheck,link:"/addENG"},
+  { name: "adcamera", icon: SwitchCamera, link: "/addcamera" },
   { name: "Settings", icon: Settings, link: "/settings" },
 ]
 export function AppSidebar() {
@@ -112,7 +116,7 @@ export function AppSidebar() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="px-4 py-3 text-sm text-muted-foreground">
-          {!isCollapsed && "Hamidi"}
+          {!isCollapsed && <h1>Welcome Farsrout ISP company</h1>}
         </SidebarFooter>
       </Sidebar>
     </TooltipProvider>

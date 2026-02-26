@@ -3,13 +3,7 @@
 import { ChartPieInteractive } from "@/components/Chart";
 import { ChartBarMultiple } from "@/components/PieChart";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -18,11 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
-import { TooltipTrigger } from "@radix-ui/react-tooltip";
-import { CardSim, Cloud, Flower, Flower2, User, Users, X } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { CardSim, Cloud, Flower, User, Users } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const Provinces = [
   { name: "Herat", color: "bg-green-500" },
@@ -32,13 +29,13 @@ const Provinces = [
 
 const Employees = [
   {
-    name: "JAck",
+    name: "Jack",
     status: "present",
     check_in: "12/3/2",
     check_outTime: "4:30",
   },
   {
-    name: "AHmad",
+    name: "Ahmad",
     status: "present",
     check_in: "12/3/2",
     check_outTime: "4:30",
@@ -51,178 +48,191 @@ const Employees = [
   },
 ];
 
-function DashboardCard() {
+export default function DashboardCard() {
   const [province, setProvince] = useState("Herat");
+  const [activity, setActivity] = useState("");
+  const [countEnginners, setCountEngineers] = useState('')
+  const [presentedEMps, setPresentedEmps] = useState('')
+  const [upsents,setUpsent]=useState('')
+
+
+ const fetchCount = async () => {
+  try {
+    const resp = await fetch("http://localhost:8000/countall");
+    const data = await resp.json();
+    setCountEngineers(data.AllEngineers);
+  } catch (err) {
+    console.error(err);
+  }
+  };
+  
+    const fetchPrsentedEMps = async () => {
+    const respons = await fetch('http://localhost:8000/presentedEmps')
+      const data = await respons.json()
+    
+      setPresentedEmps(data.message)
+  }
+
+
+  const fetchUpsents = async () => {
+    const respons = await fetch('http://localhost:8000/upsentEmps')
+    const data = await respons.json()
+    setUpsent(data.upsentEmp)
+    
+    
+  }
+  useEffect(() => {
+    fetchPrsentedEMps()
+    fetchUpsents();
+  fetchCount();
+ 
+}, []);
+  
+
   return (
-    <div className="overflow-x-hidden ">
-      <div className="grid md:grid-cols-5 grid-cols-2 bg-secondary rounded shadow p-2 mt-2 mr-2 md:gap-10 gap-5">
-        <div className="card">
-          <Card className="bg-gradient-to-br from-blue-400/60  to-blue-500 rounded-2xl shadow p-6 border-pink-200">
-            <CardContent>
-              <div>
-                <p className="text-sm font-bold">Total Employees</p>
-              </div>
-              <div className="flex justify-between items-center mt-5">
-                <h1 className="font-bold text-xl">128</h1>
-                <Users />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="card">
-          <Card className="bg-gradient-to-br from-green-400/40  to-green-500 rounded-2xl shadow p-6">
-            <CardContent>
-              <div>
-                <p className="text-sm font-bold">Total Employees</p>
-              </div>
-              <div className="flex justify-between items-center mt-5">
-                <h1 className="font-bold text-xl">128</h1>
-                <Users />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="card">
-          <Card className="bg-gradient-to-br from-red-400/40  to-red-500 rounded-2xl shadow p-6">
-            <CardContent>
-              <div>
-                <p className="text-sm font-bold">Apsent Employees</p>
-              </div>
-              <div className="flex justify-between items-center mt-5">
-                <h1 className="font-bold text-xl">128</h1>
-                <User />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="card md:col-span-2">
-          <Card className="bg-gradient-to-br from-yellow-400/60  to-pink-500 rounded-2xl shadow p-6">
-            <CardContent>
-              <div>
-                <p className="text-sm font-bold">Late Arriveal</p>
-              </div>
-              <div className="flex justify-between items-center mt-5">
-                <h1 className="font-bold text-xl">128</h1>
-                <Flower />
+    <div className="w-full overflow-hidden px-2 md:px-4">
+      {/* TOP CARDS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-2">
+        {[
+          {
+            title: "Total Employees",
+            value: countEnginners,
+            icon: <Users />,
+            bg: "from-blue-400 to-blue-500",
+          },
+          {
+            title: "Present Employees",
+            value: presentedEMps,
+            icon: <Users />,
+            bg: "from-green-400 to-green-500",
+          },
+          {
+            title: "Absent Employees",
+            value: upsents,
+            icon: <User />,
+            bg: "from-red-400 to-red-500",
+          },
+          {
+            title: "Late Arrival",
+            value: 12,
+            icon: <Flower />,
+            bg: "from-yellow-400 to-pink-500",
+            span: "md:col-span-2",
+          },
+        ].map((card, i) => (
+          <Card
+            key={i}
+            className={`bg-gradient-to-br ${card.bg} text-white rounded-2xl shadow-lg hover:scale-[1.02] transition ${card.span ?? ""}`}
+          >
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold">{card.title}</p>
+              <div className="flex justify-between items-center mt-4">
+                <h1 className="text-2xl font-bold">{card.value}</h1>
+                {card.icon}
               </div>
             </CardContent>
           </Card>
-        </div>
+        ))}
       </div>
-      <div className="middle grid grid-cols-1 md:grid-cols-2  mt-1 bg-secondary p-2 rounded shadow mr-2 justify-center items-center gap-4">
-        <div className="camera  w-full rounded shadow flex gap-5">
-          <Card className="w-full flex justify-center items-center">
-            <CardContent>
-              <CardTitle className="text-xs font-bold mb-2">
-                Live Camera Feed for [ {province} ] province
-              </CardTitle>
-              <Image
-                src={"/cam.jpeg"}
-                width={300}
-                height={300}
-                alt="Cam"
-                className="object-cover rounded-md border-blue-300 border-2"
+
+      {/* MIDDLE SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* CAMERA */}
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle className="text-sm">
+              Live Camera Feed — {province}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex gap-4">
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
+              <img
+                src={`http://localhost:8000/video_feed/${province.toLowerCase()}`}
+                alt="Camera"
+                className="object-cover rouned border-2 border-primary shadow-lg w-full h-full"
               />
-            </CardContent>
-          </Card>
-          <div className="buttons  w-15 min-h-full  bg-card  rounded p-3 flex justify-center items-center py-4 ">
-            <div>
-              {Provinces.map((data) => (
-                <Tooltip key={data.name}>
+            </div>
+
+            <div className="flex flex-col justify-center gap-2">
+              {Provinces.map((p) => (
+                <Tooltip key={p.name}>
                   <TooltipTrigger asChild>
-                    <div
-                      className={`h-5 w-5 rounded-full ${data.color} cursor-pointer my-1 border-2`}
-                      onClick={() => setProvince(data.name)}
-                    ></div>
+                    <button
+                      onClick={() => setProvince(p.name)}
+                      className={`h-5 w-5 rounded-full ${p.color} border-2 hover:scale-110 transition`}
+                    />
                   </TooltipTrigger>
-                  <TooltipContent side="right">{data?.name}</TooltipContent>
+                  <TooltipContent side="right">{p.name}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
-          </div>
-        </div>
-        <div className="bg-red-500 w-full h-70 rounded">
-          <Card className="h-full">
-            <CardContent className="h-full overflow-hidden">
-              <ChartBarMultiple />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <div className="flex justify-between w-full items-center mt-2 px-10 bg-card rounded-xl p-1">
-        <div className="flex items-center justify-between   px-3  w-100 ">
-          <h1 className="text-xs font-bold ">Current Attendance</h1>
-          <h1 className="text-xs tracking-tighter font-bold">96/128</h1>
-          <h1 className="text-xs tracking-tighter font-bold">%90</h1>
-        </div>
-        <div className="middle">
-          <Cloud className="bg-blue-500 rounded-2xl p-1 size-5" />
-        </div>
-        <div>
-          <CardSim className="bg-yellow-400 p-1 rounded-2xl size-5" />
-        </div>
-      </div>
-
-      <div className="mt-1 flex h-62 gap-2 flex-col md:flex-row md:p-1 p-2">
-        <Card className="text-sm"> 
-          <CardContent>
-            <div>
-              <h2>Employee status</h2>
-              <div>
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <h1>name</h1>
-                      </TableHead>
-                      <TableHead>
-                        <h1>status</h1>
-                      </TableHead>
-                      <TableHead>
-                        <h1>Check-in-Time</h1>
-                      </TableHead>
-                      <TableHead>
-                        <h1>Check-out-Time</h1>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  {Employees.map((data) => (
-                    <TableBody key={data?.name}>
-                      <TableRow>
-                              <TableCell>{data?.name}</TableCell>
-                              <TableCell>{data.status == 'present' ? (
-                                  <Button  className="text-xs">Present</Button>
-                              ) :
-                                  <Button variant={'destructive'} className="text-xs">Upsent</Button>
-                              }</TableCell>
-                              <TableCell>{ data?.check_in}</TableCell>
-                              <TableCell>{ data?.check_outTime}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  ))}
-                </Table>
-              </div>
-            </div>
           </CardContent>
-              </Card >
-              <div className="">
-                  <Card className="flex justify-center items-center">
-                      <CardContent>
-                          <ChartPieInteractive/>
-                      </CardContent>
-                  </Card>
-              </div>
+        </Card>
 
-              <div className="w-full bg-red-400">
-                  <Card>
-                      <CardContent>
-                          <h1>Hamidi</h1>
-                      </CardContent>
-                  </Card>
-              </div>
+        {/* BAR CHART */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            <ChartBarMultiple />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ATTENDANCE SUMMARY */}
+      <div className="flex justify-between items-center mt-4 bg-card rounded-xl px-4 py-2">
+        <div className="flex gap-4 text-xs font-semibold">
+          <span>Current Attendance</span>
+          <span>96 / 128</span>
+          <span>90%</span>
+        </div>
+        <div className="flex gap-2">
+          <Cloud className="bg-blue-500 text-white p-1 rounded-xl size-5" />
+          <CardSim className="bg-yellow-400 p-1 rounded-xl size-5" />
+        </div>
+      </div>
+
+      {/* TABLE + PIE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {/* TABLE */}
+        <Card className="md:col-span-2 overflow-hidden">
+          <CardContent className="overflow-x-auto">
+            <Table className="text-xs min-w-[500px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Check-in</TableHead>
+                  <TableHead>Check-out</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Employees.map((e) => (
+                  <TableRow key={e.name}>
+                    <TableCell>{e.name}</TableCell>
+                    <TableCell>
+                      {e.status === "present" ? (
+                        <Button size="sm">Present</Button>
+                      ) : (
+                        <Button size="sm" variant="destructive">
+                          Absent
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>{e.check_in}</TableCell>
+                    <TableCell>{e.check_outTime}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* PIE */}
+        <Card className="flex items-center justify-center">
+          <CardContent>
+            <ChartPieInteractive />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-
-export default DashboardCard;

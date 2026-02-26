@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "app/(maincode)/reports/_components/AllEngineersReport.tsx", "app/(maincode)/reports/_components/OnePersonReport.jsx"  ],
   "exclude": ["node_modules"]
 }
