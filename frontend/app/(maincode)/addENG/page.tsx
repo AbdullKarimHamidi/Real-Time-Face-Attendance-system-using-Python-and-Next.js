@@ -4,7 +4,17 @@ import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { ImagePlus, Loader } from "lucide-react";
+import { 
+  ImagePlus, 
+  Loader, 
+  UserPlus, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  SendHorizontal, 
+  Fingerprint,
+  Send
+} from "lucide-react";
 import { toast } from "sonner";
 import { EngeneerSchema, cityies } from "@/lib/ZoneSchema";
 import { Input } from "@/components/ui/input";
@@ -52,190 +62,174 @@ export default function Page() {
         body: formData,
       });
 
-      const result = await res.json();
-      if (!res.ok) {
-        toast("Faild for adding new Employee");
-        return;
-      }
-
-      toast.success("Employee added successfully");
+      if (!res.ok) throw new Error();
+      
+      toast.success("Employee Profile Synchronized");
       form.reset();
       setPreviews([]);
     } catch (error) {
-      console.error(error);
-      alert("Error saving engineer");
+      toast.error("Database Connection Failed");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
-    <div className="min-h-screen flex justify-center items-start p-10 bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-6xl rounded-3xl backdrop-blur-xl bg-white/20 dark:bg-gray-800/30 border border-white/30 dark:border-gray-700/50 shadow-2xl overflow-hidden transition-colors duration-500">
-        {/* HEADER */}
-        <div className="px-10 py-6 border-b border-white/20 dark:border-gray-700/50 backdrop-blur-md">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white drop-shadow-md transition-colors duration-300">
-            Add Employee
-          </h1>
-          <p className="text-gray-700 dark:text-gray-300 mt-1 transition-colors duration-300">
-            Fill out the form to add a new Employee
-          </p>
-        </div>
+    <div className="min-h-screen flex justify-center items-center p-4 md:p-10 bg-[#f8fafc] dark:bg-[#09090b] relative overflow-hidden">
+      {/* Visual Ambient Glows */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/10 blur-[100px] rounded-full" />
 
-        {/* CONTENT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-10">
-          {/* LEFT FORM */}
-          <div className="flex flex-col gap-6">
-            {[
-              { name: "name", label: "Name", placeholder: "First name" },
-              {
-                name: "lastName",
-                label: "Last Name",
-                placeholder: "Last name",
-              },
-              {
-                name: "address",
-                label: "Address",
-                placeholder: "Street / Area",
-              },
-              {
-                name: "email",
-                label: "Email",
-                placeholder: "example@mail.com",
-                type: "email",
-              },
-              { name: "phone", label: "Phone", placeholder: "+93..." },
-              { name: "tid", label: "TelegramID", placeholder: "987...." },
-            ].map((item) => (
-              <FieldGroup key={item.name}>
-                <Controller
-                  name={item.name as any}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid} className="w-full">
-                      <FieldLabel className="text-gray-900 dark:text-gray-100 font-medium transition-colors duration-300">
-                        {item.label}
-                      </FieldLabel>
-                      <Input
-                        {...field}
-                        type={item.type ?? "text"}
-                        placeholder={item.placeholder}
-                        className="w-full rounded-xl px-4 py-3 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 bg-white/30 dark:bg-gray-700/30 backdrop-blur-md transition-colors duration-300"
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-              </FieldGroup>
-            ))}
-
-            {/* CITY SELECT */}
-            <FieldGroup>
-              <Controller
-                name="city"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel className="text-gray-900 dark:text-gray-100 font-medium transition-colors duration-300">
-                      City
-                    </FieldLabel>
-                    <select
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      className="w-full rounded-xl px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white/30 dark:bg-gray-700/30 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors duration-300"
-                    >
-                      <option value="" disabled>
-                        Select a city
-                      </option>
-                      {cityies.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
-            </FieldGroup>
-
-            {/* IMAGE PICKER */}
-            <FieldGroup>
-              <Field>
-                <FieldLabel className="text-gray-900 dark:text-gray-100 font-medium transition-colors duration-300">
-                  Employee Images
-                </FieldLabel>
-                <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all duration-300 bg-white/20 dark:bg-gray-700/20 backdrop-blur-lg hover:border-indigo-400 hover:bg-white/30 dark:hover:bg-gray-600/30">
-                  <ImagePlus className="w-10 h-10 text-indigo-500" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Click to select images (min 3)
-                  </span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      form.setValue("Images", files, { shouldValidate: true });
-                      const urls = files.map((file) =>
-                        URL.createObjectURL(file),
-                      );
-                      setPreviews(urls);
-                    }}
-                  />
-                </label>
-                {form.formState.errors.Images && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {form.formState.errors.Images.message}
-                  </p>
-                )}
-              </Field>
-            </FieldGroup>
-
-            <Button
-              type="submit"
-              className="mt-4 w-full py-3 font-semibold rounded-2xl shadow-lg backdrop-blur-md bg-indigo-500 dark:bg-indigo-600 text-white hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors duration-300"
-              onClick={form.handleSubmit(onSubmit)}
-            >
-              {loading ? (
-                <div>
-                  <Loader className="animate-spin size-6" />
-                </div>
-              ) : (
-                "Save Employee"
-              )}
-            </Button>
-          </div>
-
-          {/* RIGHT PREVIEW */}
-          <div className="rounded-2xl p-6 shadow-inner backdrop-blur-lg bg-white/20 dark:bg-gray-800/30 border border-white/30 dark:border-gray-700/50 transition-colors duration-300">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 transition-colors duration-300">
-              Selected Images
-            </h3>
-            {previews.length === 0 ? (
-              <p className="text-gray-700 dark:text-gray-300 text-sm transition-colors duration-300">
-                No images selected
+      <div className="w-full max-w-6xl bg-white/80 dark:bg-zinc-900/50 backdrop-blur-2xl border border-white dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[700px]">
+          
+          {/* LEFT PANEL: Identity Preview */}
+          <div className="lg:col-span-4 bg-slate-900 p-8 md:p-12 text-white flex flex-col justify-between border-r border-white/5">
+            <div>
+              <div className="inline-flex p-3 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 mb-6">
+                <Fingerprint className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter italic">Personnel<br/><span className="text-indigo-400 text-4xl">Onboarding</span></h1>
+              <p className="text-slate-400 text-sm mt-4 font-medium leading-relaxed">
+                Registering a new engineer into the secure directory. All fields are mandatory for clearance.
               </p>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
+            </div>
+
+            <div className="mt-12">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4">Biometric Previews</p>
+              <div className="grid grid-cols-3 gap-2">
                 {previews.map((src, i) => (
-                  <div
-                    key={i}
-                    className="relative w-full h-28 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-300"
-                  >
-                    <img
-                      src={src}
-                      alt={`preview-${i}`}
-                      className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
-                    />
+                  <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                    <img src={src} alt="preview" className="w-full h-full object-cover" />
                   </div>
                 ))}
+                {previews.length === 0 && (
+                  <div className="col-span-3 py-10 border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center">
+                    <span className="text-[10px] uppercase font-bold text-slate-600 tracking-widest italic">Awaiting Images...</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: The Complete Form */}
+          <div className="lg:col-span-8 p-8 md:p-14 overflow-y-auto max-h-[90vh]">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+              
+              {/* BLOCK 1: PRIMARY IDENTITY */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Core Identity</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FieldGroup className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">First Name</label>
+                    <Controller name="name" control={form.control} render={({ field }) => (
+                      <Input {...field} placeholder="Ahmad" className="h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-indigo-500/20" />
+                    )} />
+                  </FieldGroup>
+                  <FieldGroup className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">Last Name</label>
+                    <Controller name="lastName" control={form.control} render={({ field }) => (
+                      <Input {...field} placeholder="hamidi" className="h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-indigo-500/20" />
+                    )} />
+                  </FieldGroup>
+                </div>
+              </section>
+
+              {/* BLOCK 2: CONNECTIVITY (Email, Phone, Telegram) */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Communication Channels</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Controller name="email" control={form.control} render={({ field }) => (
+                        <Input {...field} type="email" placeholder="example@gmail.com" className="pl-12 h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                      )} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">Phone Number</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Controller name="phone" control={form.control} render={({ field }) => (
+                        <Input {...field} placeholder="+93..." className="pl-12 h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                      )} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">Telegram ID</label>
+                    <div className="relative">
+                      <Send className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Controller name="tid" control={form.control} render={({ field }) => (
+                        <Input {...field} placeholder="Bot send ID" className="pl-12 h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                      )} />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* BLOCK 3: GEOGRAPHY (Address, City) */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location Details</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="md:col-span-3 space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">Physical Address</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Controller name="address" control={form.control} render={({ field }) => (
+                        <Input {...field} placeholder="Street, Area, Building" className="pl-12 h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                      )} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 ml-1">City Hub</label>
+                    <Controller name="city" control={form.control} render={({ field }) => (
+                      <select {...field} className="w-full h-12 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20">
+                        <option value="">Select City</option>
+                        {cityies.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )} />
+                  </div>
+                </div>
+              </section>
+
+              {/* BLOCK 4: IMAGE SYSTEM */}
+              <div className="pt-4">
+                <label className="group relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/5 hover:border-indigo-400 transition-all duration-300">
+                  <div className="flex flex-col items-center justify-center py-5">
+                    <ImagePlus className="w-8 h-8 text-indigo-500 mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-500">Capture Bio-Images</p>
+                  </div>
+                  <input type="file" multiple accept="image/*" hidden onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    form.setValue("Images", files, { shouldValidate: true });
+                    setPreviews(files.map(f => URL.createObjectURL(f)));
+                  }} />
+                </label>
+                {form.formState.errors.Images && (
+                  <p className="text-[10px] text-red-500 font-bold uppercase mt-2 text-center tracking-widest">{form.formState.errors.Images.message}</p>
+                )}
+              </div>
+
+              {/* SUBMIT */}
+              <Button disabled={loading} className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 transition-all active:scale-95 font-black uppercase tracking-[0.2em] group">
+                {loading ? <Loader className="animate-spin w-5 h-5" /> : (
+                  <span className="flex items-center gap-3">
+                    Commit to Directory <SendHorizontal className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
+              </Button>
+            </form>
           </div>
         </div>
       </div>

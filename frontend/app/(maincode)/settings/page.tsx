@@ -1,7 +1,8 @@
 "use client";
+
 import { ModeToggle } from "@/components/Toggle";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -11,21 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Clock, Save, Settings2, ShieldCheck, Sparkles } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
 import { toast } from "sonner";
+
 function Page() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const add_time = async () => {
     if (!startTime || !endTime) {
-      toast.error("Please select start and end time");
+      toast.error("Configuration Incomplete", {
+        description: "Please select both start and end operation hours.",
+      });
       return;
     }
+
+    setIsSaving(true);
     const formData = new FormData();
     formData.append("start", startTime);
     formData.append("end", endTime);
+
     try {
       const res = await fetch("http://localhost:8000/time", {
         method: "POST",
@@ -35,88 +44,158 @@ function Page() {
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error(result.message || "Could not add start and end time");
+        toast.error(result.message || "Sync Failed");
         return;
       }
 
-      toast.success("Start and end Time is created!");
+      toast.success("System Clock Updated", {
+        description: `Operational window set: ${startTime}:00 to ${endTime}:00`,
+      });
     } catch (error) {
-      toast.error("Server error. Try again later.");
+      toast.error("Server Connection Error");
       console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
+
   return (
-    <div className="w-full md:h-screen p-5">
-      {/* HEADER */}
-      <div className="header w-full h-16 bg-card shadow rounded-md flex justify-between items-center p-5">
-        <Image src={"/Logo.svg"} alt="logo" width={50} height={50} />
-        <h1 className="text-xl font-bold">Settings Page</h1>
-        <ModeToggle />
-      </div>
+    <div className="min-h-screen w-full bg-[#f8fafc] dark:bg-[#09090b] p-4 md:p-8 relative overflow-hidden">
+      {/* Background Ambient Glow */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
 
+      <div className="max-w-5xl mx-auto relative z-10">
+        
+        {/* TOP NAVIGATION BAR */}
+        <header className="w-full h-20 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl border border-white dark:border-white/10 rounded-[2rem] shadow-xl shadow-slate-200/50 dark:shadow-none flex justify-between items-center px-8 mb-10">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30">
+              <Image src="/Logo.svg" alt="logo" width={28} height={28} className="brightness-0 invert" />
+            </div>
+            <div>
+              <h1 className="text-sm font-black uppercase tracking-[0.2em] italic">System <span className="text-indigo-600">Core</span></h1>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">FarsRoute ISP • Settings</p>
+            </div>
+          </div>
+          <ModeToggle />
+        </header>
 
-      <div className="mt-10 flex justify-center">
-        <Card className="w-full max-w-md p-5">
-          <CardContent>
-            <h1 className="font-bold text-lg text-center">
-              Choose Start & End Time
-            </h1>
-            <div className="flex gap-6 mt-5">
-              <div className="flex-1">
-                <Select onValueChange={(value) => setStartTime(value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Start Time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Start Time</SelectLabel>
-                      <SelectItem value="1">1 AM</SelectItem>
-                      <SelectItem value="2">2 AM</SelectItem>
-                      <SelectItem value="3">3 AM</SelectItem>
-                      <SelectItem value="4">4 AM</SelectItem>
-                      <SelectItem value="5">5 AM</SelectItem>
-                      <SelectItem value="6">6 AM</SelectItem>
-                      <SelectItem value="7">7 AM</SelectItem>
-                      <SelectItem value="8">8 AM</SelectItem>
-                      <SelectItem value="9">9 AM</SelectItem>
-                      <SelectItem value="10">10 AM</SelectItem>
-                      <SelectItem value="11">11 AM</SelectItem>
-                      <SelectItem value="12">12 AM</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Select onValueChange={(value) => setEndTime(value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select End Time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>End Time</SelectLabel>
-                      <SelectItem value="13">1 PM</SelectItem>
-                      <SelectItem value="14">2 PM</SelectItem>
-                      <SelectItem value="15">3 PM</SelectItem>
-                      <SelectItem value="16">4 PM</SelectItem>
-                      <SelectItem value="17">5 PM</SelectItem>
-                      <SelectItem value="18">6 PM</SelectItem>
-                      <SelectItem value="19">7 PM</SelectItem>
-                      <SelectItem value="20">8 PM</SelectItem>
-                      <SelectItem value="21">9 PM</SelectItem>
-                      <SelectItem value="22">10 PM</SelectItem>
-                      <SelectItem value="23">11 PM</SelectItem>
-                      <SelectItem value="24">12 PM</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* INFO SIDEBAR */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="p-6 rounded-[2rem] bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20 relative overflow-hidden group">
+              <Sparkles className="absolute top-4 right-4 w-12 h-12 opacity-10 group-hover:rotate-12 transition-transform duration-700" />
+              <h2 className="text-lg font-black leading-tight mb-2 italic uppercase">Operational Window</h2>
+              <p className="text-xs text-indigo-100 font-medium leading-relaxed opacity-80">
+                Define the active monitoring period for the attendance matrix. Outside these hours, system resources enter standby mode.
+              </p>
             </div>
 
-            <Button className="mt-5 w-full font-bold" onClick={add_time}>
-              Save
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="p-6 rounded-[2rem] bg-white dark:bg-zinc-900/50 border border-slate-200 dark:border-white/10">
+              <div className="flex items-center gap-3 mb-4">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Auto-Save Protocol</span>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tighter">
+                Last Sync: {new Date().toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+
+          {/* SETTINGS CARD */}
+          <Card className="lg:col-span-8 border-none bg-white/80 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/5 overflow-hidden">
+            <CardHeader className="pt-10 px-10 pb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500">Scheduler Configuration</CardDescription>
+              </div>
+              <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Shift <span className="text-indigo-600">Parameters</span></CardTitle>
+            </CardHeader>
+
+            <CardContent className="p-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* START TIME */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 ml-1">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Opening Hour</label>
+                  </div>
+                  <Select onValueChange={(value) => setStartTime(value)}>
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-sm font-bold transition-all focus:ring-2 focus:ring-indigo-500">
+                      <SelectValue placeholder="Select Entry" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectGroup>
+                        {[...Array(12)].map((_, i) => (
+                          <SelectItem key={i + 1} value={`${i + 1}`} className="rounded-lg font-bold">
+                            {i + 1} AM
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* END TIME */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 ml-1">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Closing Hour</label>
+                  </div>
+                  <Select onValueChange={(value) => setEndTime(value)}>
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-sm font-bold transition-all focus:ring-2 focus:ring-indigo-500">
+                      <SelectValue placeholder="Select Exit" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectGroup>
+                        {[...Array(12)].map((_, i) => (
+                          <SelectItem key={i + 13} value={`${i + 13}`} className="rounded-lg font-bold">
+                            {i + 1} PM
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* DYNAMIC RANGE PREVIEW */}
+              {startTime && endTime && (
+                <div className="mt-10 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 animate-in fade-in zoom-in-95">
+                   <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-2">
+                     <span>Shift Duration</span>
+                     <span>{Number(endTime) - Number(startTime)} Hours</span>
+                   </div>
+                   <div className="w-full h-2 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-indigo-600 transition-all duration-1000" 
+                        style={{ width: `${((Number(endTime) - Number(startTime)) / 24) * 100}%`, marginLeft: `${(Number(startTime) / 24) * 100}%` }}
+                      />
+                   </div>
+                </div>
+              )}
+
+              <Button 
+                className="mt-10 h-16 w-full rounded-[1.5rem] bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-[0.2em] italic shadow-xl shadow-indigo-500/30 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                onClick={add_time}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Syncing System...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="w-4 h-4" /> Commit Changes
+                  </div>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -1,16 +1,29 @@
-from database.db import cameras_collection
+import cv2
 
-cameras = list(cameras_collection.find())
+rtsp_url = "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0"
 
-full_address = []   
-camindex = {}      
+cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
 
-for index, cam in enumerate(cameras):
-    cam_name = cam.get("camera_name")
-    username = cam.get("username")
-    password = cam.get("password")
-    ipaddress = cam.get("ipaddress")
-    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}"
+# Force buffer & latency settings (important)
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-    full_address.append(rtsp_url)
-    camindex[cam_name] = rtsp_url
+if not cap.isOpened():
+    print("❌ Failed to open RTSP stream")
+    exit()
+
+print("✅ RTSP stream opened")
+
+while True:
+    ret, frame = cap.read()
+
+    if not ret:
+        print("⚠️ Frame not received")
+        continue
+
+    cv2.imshow("IP Camera Test", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()

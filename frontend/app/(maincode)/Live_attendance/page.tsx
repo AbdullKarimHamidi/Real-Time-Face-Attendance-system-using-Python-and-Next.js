@@ -1,30 +1,33 @@
 "use client";
+
 import { ModeToggle } from "@/components/Toggle";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-
+import { Search, Radio, ShieldCheck, Activity, UserCheck } from "lucide-react";
 
 const cameras = [
-  { name: "herat", url: "http://localhost:8000/live_camera/herat" },
-  { name: "kabul", url: "http://localhost:8000/live_camera/kabul" },
-  { name: "mazar", url: "http://localhost:8000/live_camera/mazar" },
+  { name: "herat", url: "http://localhost:8000/live_camera/herat", region: "West Sector" },
+  { name: "kabul", url: "http://localhost:8000/live_camera/kabul", region: "Central Sector" },
+  { name: "mazar", url: "http://localhost:8000/live_camera/mazar", region: "North Sector" },
 ];
+
 type RecognizedPerson = {
   name: string;
-  image: string;
-  lastName:string
+  image: string; // Should be "/path/to/image.jpg"
+  lastName: string;
 };
-export default function LiveCamerasPage() {
-  const [recognized, setRecognized] = useState<
-    Record<string, RecognizedPerson>
-  >({});
 
-  // Fetch recognized people per camera
+const BASE_URL = "http://localhost:8000";
+
+export default function LiveCamerasPage() {
+  const [recognized, setRecognized] = useState<Record<string, RecognizedPerson>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     const fetchRecognized = async () => {
       try {
-        const res = await fetch("http://localhost:8000/recognized");
+        const res = await fetch(`${BASE_URL}/recognized`);
         const data = await res.json();
         setRecognized(data);
       } catch (err) {
@@ -34,68 +37,175 @@ export default function LiveCamerasPage() {
 
     fetchRecognized();
     const interval = setInterval(fetchRecognized, 2000);
-
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className="md:h-screen w-full p-2">
-      <div className="header h-16 w-full bg-card rounded-md px-5 flex justify-between items-center">
-        <Image src={"/Logo.svg"} alt="LgoFrom live" width={50} height={50} />
-        <div className="w-[40%]">
-          <Input placeholder="Search here ..." />
-        </div>
-        <ModeToggle/>
-      </div>
-      <main className="shadow-xl rounded-md  md:h-[85%] bg-card p-10 mt-4">
-        <h1 className="text-2xl font-semibold mb-6  dark:text-white text-center underline">
-          Live Camera Monitoring
-        </h1>
+  const filteredCameras = cameras.filter(cam => 
+    cam.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cameras.map((cam) => {
+  // Helper to ensure image URLs are formatted correctly
+  const getImageUrl = (path: string) => {
+    if (!path) return "";
+    // Prevents double slashes if path starts with /
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${BASE_URL}${cleanPath}`;
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-[#020617] p-4 transition-colors duration-500">
+      
+      {/* ===== TACTICAL NAVBAR ===== */}
+      <header className="h-20 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-[2rem] px-8 flex justify-between items-center shadow-2xl mb-6">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-slate-900 dark:bg-white rounded-xl">
+            <Image src={"/Logo.svg"} alt="Logo" width={32} height={32} className="dark:invert" />
+          </div>
+          <div className="hidden md:block">
+            <h2 className="text-sm font-black uppercase tracking-tighter italic dark:text-white">
+              Hamidi.<span className="text-cyan-500">Live</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">System Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative w-1/3 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
+          <Input 
+            placeholder="Search camera nodes..." 
+            className="pl-10 rounded-2xl border-none bg-slate-100 dark:bg-white/5 focus-visible:ring-1 focus-visible:ring-cyan-500/50 transition-all"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:flex flex-col items-end">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Monitoring Nodes</span>
+            <span className="text-[10px] font-bold text-cyan-500 uppercase">03 Online</span>
+          </div>
+          <ModeToggle />
+        </div>
+      </header>
+
+      {/* ===== MAIN MONITORING GRID ===== */}
+      <main className="w-full">
+        <div className="flex items-center gap-3 mb-8 px-4">
+          <Activity className="w-5 h-5 text-cyan-500" />
+          <h1 className="text-xl font-black uppercase tracking-widest italic dark:text-white">
+            Live Intelligence Stream
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-2">
+          {filteredCameras.map((cam) => {
             const person = recognized[cam.name];
 
             return (
               <div
                 key={cam.name}
-                className="rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700 shadow"
+                className="group relative bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-xl transition-all duration-500 hover:shadow-cyan-500/10 hover:border-cyan-500/30"
               >
-               
-                <div className="px-4 py-2 text-sm font-medium bg-gray-50 dark:bg-zinc-800 text-gray-800 dark:text-white capitalize">
-                  {cam.name} camera
+                {/* Camera Info Header */}
+                <div className="px-6 py-4 flex justify-between items-center bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <Radio className="w-3 h-3 text-red-500 animate-pulse" />
+                      {cam.name} Node
+                    </h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">{cam.region}</p>
+                  </div>
+                  <ShieldCheck className="w-4 h-4 text-emerald-500 opacity-50" />
                 </div>
-                <div className="relative aspect-video border-2 border-blue-400 rounded-md shadow-2xl">
+
+                {/* Video Feed Wrapper */}
+                <div className="relative aspect-video mx-4 mt-4 rounded-[1.8rem] overflow-hidden border-2 border-slate-200 dark:border-white/10 group-hover:border-cyan-500/50 transition-colors bg-slate-200 dark:bg-slate-800">
+                  
+                  {/* Scanline Effect Animation */}
+                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                    <div className="w-full h-[2px] bg-cyan-400/30 shadow-[0_0_15px_rgba(34,211,238,0.5)] absolute top-0 animate-[scan_4s_linear_infinite]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.1)_100%)] opacity-50" />
+                  </div>
+
                   <img
                     src={cam.url}
                     alt={cam.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.png";
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1000";
                     }}
                   />
 
-                  {/* ✅ Recognized person overlay */}
-                  {person && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur text-white rounded-lg p-2 flex items-center gap-3">
-                      <img
-                        src={`http://localhost:8000${person.image}`}
-                        alt={person.name}
-                        className="w-12 h-12 rounded-full object-cover border border-white"
-                      />
-                      <div>
-                        <p className="text-sm font-semibold">{person.name}</p>
-                        <p className="text-sm font-semibold">{person.lastName}</p>
-                        <p className="text-xs text-green-400">Recognized</p>
+                  {/* ✅ HUD Overlay for Recognized Person */}
+                  {person && person.name !== "Unknown" ? (
+                    <div className="absolute inset-x-3 bottom-3 animate-in slide-in-from-bottom-4 fade-in duration-500 z-20">
+                      <div className="bg-black/60 backdrop-blur-xl border border-white/20 text-white rounded-2xl p-3 flex items-center gap-4">
+                        <div className="relative flex-shrink-0">
+                          <img
+                            src={getImageUrl(person.image)}
+                            alt={person.name}
+                            className="w-12 h-12 rounded-xl object-cover border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.6)]"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=" + person.name + "&background=06b6d4&color=fff";
+                            }}
+                          />
+                          <div className="absolute -top-1 -right-1 bg-cyan-500 p-0.5 rounded-full border border-black">
+                            <UserCheck className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-black uppercase tracking-widest truncate">{person.name}</p>
+                            <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-black tracking-tighter shrink-0">MATCHED</span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter mb-1 truncate">{person.lastName}</p>
+                          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-cyan-500 w-[98%] animate-pulse" />
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  ) : (
+                    <div className="absolute top-3 right-3 bg-black/40 backdrop-blur px-2 py-1 rounded-md border border-white/10 z-20">
+                       <span className="text-[8px] font-mono text-white/60 uppercase tracking-widest">Searching...</span>
+                    </div>
                   )}
+                </div>
+
+                {/* Footer Data */}
+                <div className="px-6 py-6 flex justify-between items-center">
+                  <div className="flex gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-400 uppercase">Latency</span>
+                      <span className="text-[10px] font-bold dark:text-white">14ms</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-400 uppercase">Bitrate</span>
+                      <span className="text-[10px] font-bold dark:text-white">4.2 Mbps</span>
+                    </div>
+                  </div>
+                  <button className="px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-105 active:scale-95">
+                    View Node
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       </main>
+
+      {/* ===== GLOBAL CSS FOR SCANNING ===== */}
+      <style jsx global>{`
+        @keyframes scan {
+          0% { top: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

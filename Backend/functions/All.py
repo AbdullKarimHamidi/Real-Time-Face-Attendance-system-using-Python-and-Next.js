@@ -109,20 +109,41 @@ import time
 import threading
 
 # ==================== UTILITY FUNCTIONS ====================
-def draw_focus_box(img, x, y, w, h, color=(0, 255, 0), thickness=4, length=20):
-    # top-left
-    cv2.line(img, (x, y), (x + length, y), color, thickness)
-    cv2.line(img, (x, y), (x, y + length), color, thickness)
-    # top-right
-    cv2.line(img, (x + w, y), (x + w - length, y), color, thickness)
-    cv2.line(img, (x + w, y), (x + w, y + length), color, thickness)
-    # bottom-left
-    cv2.line(img, (x, y + h), (x + length, y + h), color, thickness)
-    cv2.line(img, (x, y + h), (x, y + h - length), color, thickness)
-    # bottom-right
-    cv2.line(img, (x + w, y + h), (x + w - length, y + h), color, thickness)
-    cv2.line(img, (x + w, y + h), (x + w, y + h - length), color, thickness)
+def draw_focus_box(img, x, y, w, h, color=(238, 211, 34), thickness=2, length=25):
+    """
+    Draws tactical corner brackets around a detected object.
+    Default color is Tactical Cyan (BGR: 238, 211, 34)
+    """
+    # Define the 4 corners
+    top_left = (x, y)
+    top_right = (x + w, y)
+    bottom_left = (x, y + h)
+    bottom_right = (x + w, y + h)
 
+    # Use cv2.LINE_AA for smoother, high-tech looking lines
+    line_type = cv2.LINE_AA
+
+    # top-left corner
+    cv2.line(img, top_left, (x + length, y), color, thickness, line_type)
+    cv2.line(img, top_left, (x, y + length), color, thickness, line_type)
+
+    # top-right corner
+    cv2.line(img, top_right, (x + w - length, y), color, thickness, line_type)
+    cv2.line(img, top_right, (x + w, y + length), color, thickness, line_type)
+
+    # bottom-left corner
+    cv2.line(img, bottom_left, (x + length, y + h), color, thickness, line_type)
+    cv2.line(img, bottom_left, (x, y + h - length), color, thickness, line_type)
+
+    # bottom-right corner
+    cv2.line(img, bottom_right, (x + w - length, y + h), color, thickness, line_type)
+    cv2.line(img, bottom_right, (x + w, y + h - length), color, thickness, line_type)
+
+    # Optional: Add a very faint semi-transparent box overlay
+    # This mimics the "Intelligence Stream" look from your React UI
+    overlay = img.copy()
+    cv2.rectangle(overlay, (x, y), (x + w, y + h), color, 1)
+    cv2.addWeighted(overlay, 0.15, img, 0.85, 0, img)
 def Draw_rectagle(img, x, y, x2, y2, color, thickness):
     cv2.rectangle(img, (x, y), (x2, y2), color, thickness)
 

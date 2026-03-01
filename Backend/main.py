@@ -9,12 +9,10 @@ from datetime import datetime, time as dt_time
 import threading
 import os
 import random
-
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from database.db import eng_collection as db
 from database.db import eng_collection
-
 from urllib.parse import quote
 from telegram_service import send_message,start_telegram_bot
 from pymongo import DESCENDING
@@ -28,28 +26,28 @@ from database.db import start_end_time
 from database.db import cameras_collection
 
 from telegram_service import attendance_requests, request_lock, TIMEOUT_SECONDS, check_attendance_request
+from fastapi.security import OAuth2PasswordBearer
 
 
 
+# cameras = list(cameras_collection.find())
 
-cameras = list(cameras_collection.find())
+# full_address = []   
+# camindex = {}      
 
-full_address = []   
-camindex = {}      
+# for index, cam in enumerate(cameras):
+#     cam_name = cam.get("camera_name")
+#     username = cam.get("username")
+#     password = cam.get("password")
+#     ipaddress = cam.get("ipaddress")
+#     rtsp_url = f"rtsp://{username}:{password}@{ipaddress}"
 
-for index, cam in enumerate(cameras):
-    cam_name = cam.get("camera_name")
-    username = cam.get("username")
-    password = cam.get("password")
-    ipaddress = cam.get("ipaddress")
-    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}"
-
-    full_address.append(rtsp_url)
-    camindex[cam_name] = rtsp_url
+#     full_address.append(rtsp_url)
+#     camindex[cam_name] = rtsp_url
 
 # ================= CONFIG =================
 
-CAMERA_INDEX = {"herat": 0, "kabul": 1, "mazar": 2}
+CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 3}
 IMAGE_FOLDER = "engineers_images"
 ATT_INTERVAL = 3600 
 
@@ -107,6 +105,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+# ====================== route for Login =========================
+ 
+
+
+
 @app.post("/addCamera")
 def add_camera(
     camname: str = Form(...),
@@ -114,7 +119,7 @@ def add_camera(
     password: str = Form(...),
     ipaddress: str = Form(...),
 ):
-    # Basic validation
+   
     if not camname.strip():
         raise HTTPException(status_code=400, detail="Camera name is required")
     if not username.strip():
@@ -123,14 +128,10 @@ def add_camera(
         raise HTTPException(status_code=400, detail="Password is required")
     if not ipaddress.strip():
         raise HTTPException(status_code=400, detail="IP address is required")
-    
-    # Optional: check valid IP format
     import re
     ip_pattern = r"^(?:\d{1,3}\.){3}\d{1,3}$"
     if not re.match(ip_pattern, ipaddress):
         raise HTTPException(status_code=400, detail="Invalid IP address format")
-
-    # Insert into MongoDB
     cameras_collection.insert_one({
         "camera_name": camname,
         "username": username,
@@ -138,8 +139,6 @@ def add_camera(
         "ipaddress": ipaddress,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
-
-
 
 @app.post('/time')
 def specify_time(start: str = Form(...), end: str = Form(...)):
@@ -212,7 +211,7 @@ def getLatency(empemail: str):
     ))
 
     # Get scheduled work times
-    worktime = start_end_time.find_one()
+    worktime = start_end_time.find_one({},sort=[("_id", -1)])
     start_str = worktime['start'] if worktime else None
     end_str = worktime['end'] if worktime else None
     start_time = time(int(start_str), 0) if start_str else None
@@ -366,7 +365,6 @@ def upsence_attendance():
                         )
                          )
     
-           
 # =================function for kepping start for ever the telgram bot=============
 @app.on_event("startup")
 def startup_event():
@@ -415,9 +413,6 @@ def get_engineer_image(person_name: str):
 def get_recognized():
     with recognized_lock:
         return recognized_per_camera
-
-
-
 
 def generate_custom_id():
     prefix = "EMP0000"  # fixed part
@@ -668,7 +663,7 @@ def camera_worker(camera_name: str, index: int):
         if not ret:
             continue
 
-        frame = cv2.flip(frame, 1)
+        # frame = cv2.flip(frame, 1)
         faces = face_app.get(frame, max_num=4)
 
         for face in faces:
@@ -705,17 +700,27 @@ def camera_worker(camera_name: str, index: int):
                             "image": f"/engineer_image/{person_name}"
                         }
 
-            cv2.putText(
-                frame,
-                display_name,
-                (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0) if display_name != "Unknown" else (0, 0, 255),
-                2
-            )
+                    COLOR_MATCHED = (238, 211, 34)  
+                    COLOR_UNKNOWN = (80, 70, 244)  
+
+                 
+                    text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
+
+                    cv2.putText(
+                        frame,
+                        display_name.upper(),
+                        (x1, y1 - 12),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,               
+                        text_color,
+                        2,                 
+                        cv2.LINE_AA       
+                    )
+            COLOR_CYAN = (238, 211, 34)   
+            COLOR_DANGER = (80, 70, 244) 
+            rect_color = COLOR_CYAN if display_name != "Unknown" else COLOR_DANGER
             All.draw_focus_box(frame, x1, y1, x2 - x1, y2 - y1)
-            All.Draw_rectagle(frame, x1, y1, x2, y2, (0, 255, 0), 1)
+            All.Draw_rectagle(frame, x1, y1, x2, y2, rect_color, 1)
 
 
         with frame_locks[camera_name]:

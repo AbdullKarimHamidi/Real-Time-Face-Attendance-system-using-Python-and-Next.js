@@ -133,10 +133,9 @@ export default function MonthReport() {
 
   /* ================= UI ================= */
   return (
-    <div className="space-y-4">
-
-      {/* ===== Controls ===== */}
-      <div className="flex gap-4 items-center print-hidden">
+    <div className="p-6 space-y-4">
+      {/* ===== Controls (Hidden during print) ===== */}
+      <div className="flex gap-4 items-center print-hidden no-print">
         <Select value={city} onValueChange={setCity}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="City" />
@@ -159,31 +158,34 @@ export default function MonthReport() {
 
         <button
           onClick={() => window.print()}
-          className="px-3 py-2 border rounded-md text-sm"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
         >
-          Print
+          Print Report
         </button>
 
         <button
           onClick={downloadJSON}
-          className="px-3 py-2 border rounded-md text-sm"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50"
         >
           Backup JSON
         </button>
       </div>
 
-      {/* ===== TABLE ===== */}
-      <div ref={tableRef} className="overflow-x-auto">
+      {/* ===== TABLE CONTAINER ===== */}
+      <div ref={tableRef} id="printable-table" className="overflow-x-auto">
+        <h2 className="hidden print:block text-xl font-bold mb-4">
+          Attendance Report - {month} ({city === "all" ? "All Cities" : city})
+        </h2>
         <Table className="border border-gray-400 border-collapse w-full bg-white dark:bg-gray-900">
           <TableHeader>
             <TableRow>
-              <TableHead className="border border-gray-400 text-center bg-gray-100 dark:bg-gray-800">
+              <TableHead className="border border-gray-400 text-center bg-gray-100 dark:bg-gray-800 font-bold text-black">
                 Name
               </TableHead>
               {DAYS.map((d) => (
                 <TableHead
                   key={d}
-                  className="border border-gray-400 text-center bg-gray-100 dark:bg-gray-800"
+                  className="border border-gray-400 text-center bg-gray-100 dark:bg-gray-800 text-[10px] p-1"
                 >
                   {d}
                 </TableHead>
@@ -194,7 +196,7 @@ export default function MonthReport() {
           <TableBody>
             {filteredEmployees.map((emp) => (
               <TableRow key={emp._id}>
-                <TableCell className="border border-gray-400 font-semibold bg-gray-50 dark:bg-gray-800">
+                <TableCell className="border border-gray-400 font-semibold bg-gray-50 dark:bg-gray-800 whitespace-nowrap">
                   {emp.name}
                 </TableCell>
 
@@ -213,22 +215,22 @@ export default function MonthReport() {
                     return (
                       <TableCell
                         key={day}
-                        className="border border-gray-400 bg-red-300 dark:bg-red-700 text-center font-bold absent-cell"
+                        className="border border-gray-400 bg-red-300 dark:bg-red-900 text-center font-bold text-[9px] absent-cell"
                       >
-                        Upsent
+                        Absent
                       </TableCell>
                     );
 
                   return (
                     <TableCell
                       key={day}
-                      className="border border-gray-400 bg-green-200 dark:bg-green-800 text-xs present-cell"
+                      className="border border-gray-400 bg-green-100 dark:bg-green-900 text-[8px] p-1 leading-tight present-cell"
                     >
                       In: {cell.entrance || "--"}
                       <br />
                       Out: {cell.leaving || "--"}
                       <br />
-                      Late: {formatLatency(cell.latency)}
+                      L: {formatLatency(cell.latency)}
                     </TableCell>
                   );
                 })}
@@ -241,25 +243,63 @@ export default function MonthReport() {
       {/* ===== PRINT STYLES ===== */}
       <style jsx global>{`
         @media print {
-          .print-hidden {
-            display: none !important;
+          /* 1. Hide everything on the page */
+          body * {
+            visibility: hidden;
           }
 
+          /* 2. Make the table container and its contents visible */
+          #printable-table, 
+          #printable-table * {
+            visibility: visible;
+          }
+
+          /* 3. Reset the position of the table to the top left */
+          #printable-table {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+          }
+
+          /* 4. Formatting adjustments for the table */
           table {
-            font-size: 9px;
+            border-spacing: 0;
+            border-collapse: collapse !important;
+            width: 100% !important;
+            table-layout: auto;
           }
 
+          th, td {
+            border: 1px solid #000 !important; /* Force black borders for printing */
+            padding: 2px !important;
+            word-wrap: break-word;
+          }
+
+          /* 5. Force background colors to print */
           .absent-cell {
-            background-color: #f87171 !important; /* red for print */
+            background-color: #fca5a5 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           .present-cell {
-            background-color: #86efac !important; /* green for print */
-          }
-
-          * {
+            background-color: #dcfce7 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          /* 6. Landscape mode is essential for 31 columns */
+          @page {
+            size: landscape;
+            margin: 10mm;
+          }
+
+          /* 7. Extra safety: Hide UI components specifically */
+          .print-hidden, .no-print {
+            display: none !important;
           }
         }
       `}</style>
