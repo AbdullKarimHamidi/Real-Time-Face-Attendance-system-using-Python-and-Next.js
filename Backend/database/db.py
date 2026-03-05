@@ -14,3 +14,6 @@ Attendace_collection=db["Attendance"]
 
 start_end_time=db['time']
 cameras_collection=db['Cameras']
+
+
+UsersCollectiosn=db['Users']

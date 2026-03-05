@@ -1,29 +1,27 @@
+import torch
 import cv2
+import numpy as np
+import insightface
+from insightface.app import FaceAnalysis
+print(f"Is CUDA available for Torch? {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"Running on: {torch.cuda.get_device_name(0)}")
+options = {
+    'device_id': 0,
+    'cudnn_conv_algo_search': 'DEFAULT',
+    'arena_extend_strategy': 'kSameAsRequested'
+}
+app = FaceAnalysis(name='buffalo_s', providers=[('CUDAExecutionProvider', options), 'CPUExecutionProvider'])
+app.prepare(ctx_id=0, det_size=(320, 320))
 
-rtsp_url = "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0"
-
-cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
-
-# Force buffer & latency settings (important)
-cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-if not cap.isOpened():
-    print("❌ Failed to open RTSP stream")
-    exit()
-
-print("✅ RTSP stream opened")
-
-while True:
-    ret, frame = cap.read()
-
-    if not ret:
-        print("⚠️ Frame not received")
-        continue
-
-    cv2.imshow("IP Camera Test", frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+img = cv2.imread("face2.jpg")
+if img is not None:
+    img = cv2.resize(img, (640, 480))
+    faces = app.get(img)
+    print(f"Detected {len(faces)} faces.")
+    res_img = app.draw_on(img, faces)
+    cv2.imshow("940MX GPU Result", res_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+else:
+    print("Error: Image not found.")

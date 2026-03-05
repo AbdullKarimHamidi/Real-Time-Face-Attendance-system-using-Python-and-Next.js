@@ -1,5 +1,4 @@
-
-from fastapi import FastAPI, Form, File, UploadFile
+from fastapi import FastAPI, Form, File, UploadFile,Response
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import cv2
@@ -24,12 +23,12 @@ import threading
 from datetime import datetime, timedelta,time
 from database.db import start_end_time
 from database.db import cameras_collection
-
+from database.db import UsersCollectiosn
 from telegram_service import attendance_requests, request_lock, TIMEOUT_SECONDS, check_attendance_request
 from fastapi.security import OAuth2PasswordBearer
-
-
-
+from pydantic import BaseModel
+import warnings
+warnings.filterwarnings("ignore")
 # cameras = list(cameras_collection.find())
 
 # full_address = []   
@@ -47,7 +46,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 # ================= CONFIG =================
 
-CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 3}
+CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 2}
 IMAGE_FOLDER = "engineers_images"
 ATT_INTERVAL = 3600 
 
@@ -68,8 +67,9 @@ os.makedirs(EMB_DIR, exist_ok=True)
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
 # ================= FACE MODEL =================
-face_app = FaceAnalysis(name="buffalo_l", providers=["CUDAExecutionProvider"])
-face_app.prepare(ctx_id=0, det_size=(320, 320))
+face_app = FaceAnalysis(name="buffalo_l", providers=['CUDAExecutionProvider','CPUExecutionProvider'])
+face_app.prepare(ctx_id=0, det_size=(320,320))
+
 
 # ================= LOAD EMBEDDINGS =================
 def load_embeddings():
@@ -105,12 +105,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
 # ====================== route for Login =========================
- 
+class datainfo(BaseModel):
+    name:str
+    lastname:str
+    email:str
+    password:str
+SECRET_KEY = "SUPER_SECRET_KEY_CHANGE_ME"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 7
 
-
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+# @app.post('/addemp')
+# def addEmp(data:datainfo,respons:Response):
+#     if UsersCollectiosn.find_one({'email':data.email}):
+#         raise HTTPException(status_code=400,detail="This User already exist !")
+#     UsersCollectiosn.insert_one({'name':data.name,'lastName':data.lastname,'email':data.email,'password':data.password})
+#     hash_password=hash_password(data.email)
+#     token=create_access_token({'email':data.email})
+#     respons.set_cookie(
+#         key='access_token',
+#         value=token,
+#         httponly=True,
+#         secure=False,
+#         samesite='1ax',
+#         max_age=60*60*24*7
+#     )
+#     return{
+#        'message':"User is created"
+#     }
 
 @app.post("/addCamera")
 def add_camera(
@@ -450,6 +477,9 @@ async def add_engineer(
 ):
     global face_embeddings, face_names, face_emails
 
+    if db.find_one({'email':email}):
+        raise HTTPException(status_code=400,detail="This user already exist ")
+
     person_dir = os.path.join(IMAGE_FOLDER, f"{name}_{email}")
     os.makedirs(person_dir, exist_ok=True)
 
@@ -652,6 +682,83 @@ def getallattendance(eng_email: str):
 
 #     return results
 
+# def camera_worker(camera_name: str, index: int):
+#     cap = cv2.VideoCapture(index)
+#     if not cap.isOpened():
+#         print(f"Camera {camera_name} failed")
+#         return
+
+#     while True:
+#         ret, frame = cap.read()
+#         if not ret:
+#             continue
+#         faces = face_app.get(frame, max_num=4)
+
+#         for face in faces:
+#             x1, y1, x2, y2 = map(int, face.bbox)
+#             emb = face.embedding.reshape(1, -1)
+#             display_name = "Unknown"
+#             person_name = ""
+#             person_email = ""
+#             telegram_id = None
+#             if face_embeddings.shape[0] > 0:
+#                 sims = cosine_similarity(emb, face_embeddings)
+#                 idx = np.argmax(sims)
+#                 if sims[0][idx] > 0.5:
+#                     person_email = face_emails[idx]
+#                     full_name = face_names[idx] 
+#                     person_name = full_name
+#                     display_name = full_name.split('_')[0]
+#                     user = eng_collection.find_one({'email': person_email}, {'_id': 0, 'tid': 1})
+#                     telegram_id = int(user['tid']) if user else None
+#                     if telegram_id:
+#                         action = check_attendance_request(telegram_id)
+#                         if action == "entrance" or action=='exit':
+#                             today_name = datetime.now().strftime("%A")
+#                             if today_name != 'Friday':
+#                                 takeAttendance(person_name, person_email)
+#                                 print(f"[TELEGRAM ENTERANCE] {display_name} marked attendance via Telegram button")
+
+#                     with recognized_lock:
+#                         recognized_per_camera[camera_name] = {
+#                             "name": person_name,
+#                             "image": f"/engineer_image/{person_name}"
+#                         }
+
+#                     COLOR_MATCHED = (238, 211, 34)  
+#                     COLOR_UNKNOWN = (80, 70, 244)  
+
+                 
+#                     text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
+
+#                     cv2.putText(
+#                         frame,
+#                         display_name.upper(),
+#                         (x1, y1 - 12),
+#                         cv2.FONT_HERSHEY_SIMPLEX,
+#                         0.6,               
+#                         text_color,
+#                         2,                 
+#                         cv2.LINE_AA       
+#                     )
+#             COLOR_CYAN = (238, 211, 34)   
+#             COLOR_DANGER = (80, 70, 244) 
+#             rect_color = COLOR_CYAN if display_name != "Unknown" else COLOR_DANGER
+#             All.draw_focus_box(frame, x1, y1, x2 - x1, y2 - y1)
+#             All.Draw_rectagle(frame, x1, y1, x2, y2, rect_color, 1)
+
+
+#         with frame_locks[camera_name]:
+#             camera_frames[camera_name] = frame.copy()
+
+  
+#         current_time = datetime.now()
+#         if dt_time(17, 0) <= current_time <= dt_time(18, 0):
+#             upsence_attendance()
+
+#     cap.release()
+
+
 def camera_worker(camera_name: str, index: int):
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
@@ -662,8 +769,6 @@ def camera_worker(camera_name: str, index: int):
         ret, frame = cap.read()
         if not ret:
             continue
-
-        # frame = cv2.flip(frame, 1)
         faces = face_app.get(frame, max_num=4)
 
         for face in faces:
@@ -681,11 +786,8 @@ def camera_worker(camera_name: str, index: int):
                     full_name = face_names[idx] 
                     person_name = full_name
                     display_name = full_name.split('_')[0]
-
-                  
                     user = eng_collection.find_one({'email': person_email}, {'_id': 0, 'tid': 1})
                     telegram_id = int(user['tid']) if user else None
-
                     if telegram_id:
                         action = check_attendance_request(telegram_id)
                         if action == "entrance" or action=='exit':
@@ -693,19 +795,14 @@ def camera_worker(camera_name: str, index: int):
                             if today_name != 'Friday':
                                 takeAttendance(person_name, person_email)
                                 print(f"[TELEGRAM ENTERANCE] {display_name} marked attendance via Telegram button")
-
                     with recognized_lock:
                         recognized_per_camera[camera_name] = {
                             "name": person_name,
                             "image": f"/engineer_image/{person_name}"
                         }
-
                     COLOR_MATCHED = (238, 211, 34)  
                     COLOR_UNKNOWN = (80, 70, 244)  
-
-                 
                     text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
-
                     cv2.putText(
                         frame,
                         display_name.upper(),
@@ -732,6 +829,9 @@ def camera_worker(camera_name: str, index: int):
             upsence_attendance()
 
     cap.release()
+
+
+
 
 @app.get('/countall')
 def CounallEngs():
