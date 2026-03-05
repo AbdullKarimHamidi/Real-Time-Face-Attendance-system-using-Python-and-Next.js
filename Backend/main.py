@@ -29,24 +29,25 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import warnings
 warnings.filterwarnings("ignore")
-# cameras = list(cameras_collection.find())
 
-# full_address = []   
-# camindex = {}      
+cameras = list(cameras_collection.find())
+full_address = []
+CAMERA_INDEX = {}
 
-# for index, cam in enumerate(cameras):
-#     cam_name = cam.get("camera_name")
-#     username = cam.get("username")
-#     password = cam.get("password")
-#     ipaddress = cam.get("ipaddress")
-#     rtsp_url = f"rtsp://{username}:{password}@{ipaddress}"
+for index, cam in enumerate(cameras):
+    cam_name = cam.get("camera_name")
+    username = cam.get("username")
+    password = cam.get("password")
+    ipaddress = cam.get("ipaddress")
+    port = cam.get("port", "554")
 
-#     full_address.append(rtsp_url)
-#     camindex[cam_name] = rtsp_url
+    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
+    full_address.append(rtsp_url)
+    CAMERA_INDEX[cam_name] = rtsp_url
 
 # ================= CONFIG =================
 
-CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 2}
+# CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 2}
 IMAGE_FOLDER = "engineers_images"
 ATT_INTERVAL = 3600 
 
@@ -104,6 +105,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ================= all cmaera names=================
+@app.get('/cameraname')
+def cameraName():
+    cameras = list(cameras_collection.find())
+    if not cameras:
+        raise HTTPException(status_code=404, detail='There is no cameras in the system')
+    names = []
+    for camera in cameras:
+        names.append(camera.get("camera_name"))
+    return names
+
+
 
 # ====================== route for Login =========================
 class datainfo(BaseModel):
@@ -177,59 +192,6 @@ def specify_time(start: str = Form(...), end: str = Form(...)):
     return {"message": "Insert time is created successfully"}
 
 
-# @app.get('/latency/{empemail}')
-# def getLatency(empemail: str):
-#     employee = list(db.attendance_collection.find(
-#         {'email': empemail},
-#         {'_id': 0, 'entrance_time': 1, 'leaving_time': 1}
-#     ))
-
-#     # Get scheduled work times
-#     worktime = start_end_time.find_one()
-#     start_str = worktime['start'] if worktime else None
-#     end_str = worktime['end'] if worktime else None
-#     start_time = time(int(start_str), 0) if start_str else None
-#     end_time = time(int(end_str), 0) if end_str else None
-
-#     results = []
-
-#     for record in employee:
-#         entrance_time = record.get('entrance_time')
-#         leaving_time = record.get('leaving_time')
-
-#         if not entrance_time or not leaving_time:
-#             continue
-
-        
-#         entrance = max(entrance_time, datetime.combine(entrance_time.date(), start_time))
-#         leaving = min(leaving_time, datetime.combine(leaving_time.date(), end_time))
-
-#         if entrance >= leaving:
-#             total_absent = timedelta(hours=end_time.hour - start_time.hour)
-#         else:
-#             # Late arrival
-#             late = entrance - datetime.combine(entrance_time.date(), start_time) if entrance_time.time() > start_time else timedelta(0)
-#             # Early leaving
-#             early_leave = datetime.combine(leaving_time.date(), end_time) - leaving if leaving_time.time() < end_time else timedelta(0)
-#             total_absent = late + early_leave
-
-#         # Convert to hours and minutes
-#         hours = total_absent.seconds // 3600
-#         minutes = (total_absent.seconds % 3600) // 60
-
-#         results.append({
-#             'date': entrance_time.date().strftime('%Y-%m-%d'),
-#             'entrance': entrance_time.strftime('%H:%M'),
-#             'leaving': leaving_time.strftime('%H:%M'),
-#             'absent_hours': hours,
-#             'absent_minutes': minutes
-#         })
-
-#     return {"employee_email": empemail, "absent_records": results}
-        
-
-
-@app.get('/latency/{empemail}')
 
 def getLatency(empemail: str):
     employee = list(db.attendance_collection.find(
@@ -635,130 +597,6 @@ def getallattendance(eng_email: str):
     return results
 
 
-# @app.get('/allattendance/{eng_email}')
-# def getallattendance(eng_email: str):
-#     attendances = list(
-#         db.attendance_collection.find({"email": eng_email})
-#     )
-
-#     if not attendances:
-#         raise HTTPException(status_code=404, detail="No attendance found")
-
-#     # Get work time (example: 8 to 16)
-#     worktime = start_end_time.find_one({})
-#     if not worktime:
-#         raise HTTPException(status_code=500, detail="Work time not set")
-
-#     work_start = time(int(worktime["start"]), 0)  # 08:00
-#     work_end = time(int(worktime["end"]), 0)      # 16:00
-
-#     results = []
-
-#     for atd in attendances:
-#         entrance = atd.get("entrance_time")
-#         leaving = atd.get("leaving_time")
-
-#         latency_minutes = 0
-
-#         if entrance and leaving:
-#             work_start_dt = datetime.combine(entrance.date(), work_start)
-#             work_end_dt = datetime.combine(entrance.date(), work_end)
-
-#             # Late arrival
-#             if entrance > work_start_dt:
-#                 late = entrance - work_start_dt
-#                 latency_minutes += int(late.total_seconds() / 60)
-
-#             # Early leaving
-#             if leaving < work_end_dt:
-#                 early = work_end_dt - leaving
-#                 latency_minutes += int(early.total_seconds() / 60)
-
-#         results.append({
-#             "_id": str(atd["_id"]),
-#             "date": entrance.date().strftime('%Y-%m-%d') if entrance else None,
-#             "latency": latency_minutes
-#         })
-
-#     return results
-
-# def camera_worker(camera_name: str, index: int):
-#     cap = cv2.VideoCapture(index)
-#     if not cap.isOpened():
-#         print(f"Camera {camera_name} failed")
-#         return
-
-#     while True:
-#         ret, frame = cap.read()
-#         if not ret:
-#             continue
-#         faces = face_app.get(frame, max_num=4)
-
-#         for face in faces:
-#             x1, y1, x2, y2 = map(int, face.bbox)
-#             emb = face.embedding.reshape(1, -1)
-#             display_name = "Unknown"
-#             person_name = ""
-#             person_email = ""
-#             telegram_id = None
-#             if face_embeddings.shape[0] > 0:
-#                 sims = cosine_similarity(emb, face_embeddings)
-#                 idx = np.argmax(sims)
-#                 if sims[0][idx] > 0.5:
-#                     person_email = face_emails[idx]
-#                     full_name = face_names[idx] 
-#                     person_name = full_name
-#                     display_name = full_name.split('_')[0]
-#                     user = eng_collection.find_one({'email': person_email}, {'_id': 0, 'tid': 1})
-#                     telegram_id = int(user['tid']) if user else None
-#                     if telegram_id:
-#                         action = check_attendance_request(telegram_id)
-#                         if action == "entrance" or action=='exit':
-#                             today_name = datetime.now().strftime("%A")
-#                             if today_name != 'Friday':
-#                                 takeAttendance(person_name, person_email)
-#                                 print(f"[TELEGRAM ENTERANCE] {display_name} marked attendance via Telegram button")
-
-#                     with recognized_lock:
-#                         recognized_per_camera[camera_name] = {
-#                             "name": person_name,
-#                             "image": f"/engineer_image/{person_name}"
-#                         }
-
-#                     COLOR_MATCHED = (238, 211, 34)  
-#                     COLOR_UNKNOWN = (80, 70, 244)  
-
-                 
-#                     text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
-
-#                     cv2.putText(
-#                         frame,
-#                         display_name.upper(),
-#                         (x1, y1 - 12),
-#                         cv2.FONT_HERSHEY_SIMPLEX,
-#                         0.6,               
-#                         text_color,
-#                         2,                 
-#                         cv2.LINE_AA       
-#                     )
-#             COLOR_CYAN = (238, 211, 34)   
-#             COLOR_DANGER = (80, 70, 244) 
-#             rect_color = COLOR_CYAN if display_name != "Unknown" else COLOR_DANGER
-#             All.draw_focus_box(frame, x1, y1, x2 - x1, y2 - y1)
-#             All.Draw_rectagle(frame, x1, y1, x2, y2, rect_color, 1)
-
-
-#         with frame_locks[camera_name]:
-#             camera_frames[camera_name] = frame.copy()
-
-  
-#         current_time = datetime.now()
-#         if dt_time(17, 0) <= current_time <= dt_time(18, 0):
-#             upsence_attendance()
-
-#     cap.release()
-
-
 def camera_worker(camera_name: str, index: int):
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
@@ -829,8 +667,6 @@ def camera_worker(camera_name: str, index: int):
             upsence_attendance()
 
     cap.release()
-
-
 
 
 @app.get('/countall')

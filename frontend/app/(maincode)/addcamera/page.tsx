@@ -86,7 +86,6 @@ export default function Page() {
         method: "POST",
         body: form,
       });
-
       if (res.ok) {
         toast.success("Stream Initialized", {
           description: `Camera ${formData.name} linked to ${formData.ip}`,
@@ -148,8 +147,6 @@ export default function Page() {
             </div>
           </div>
         </div>
-
-        {/* RIGHT: REGISTRATION FORM */}
         <Card className="lg:col-span-7 border-none bg-white/80 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl overflow-hidden">
           <CardHeader className="pt-10 px-10">
             <CardTitle className="text-2xl font-black uppercase tracking-tighter italic">Terminal <span className="text-indigo-600">Auth</span></CardTitle>
@@ -162,11 +159,11 @@ export default function Page() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 ml-1">
                   <Video className="w-3 h-3 text-slate-400" />
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Hardware ID</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Camera name</label>
                 </div>
                 <Input
                   name="name"
-                  placeholder="Front Entrance 01"
+                  placeholder="Herat"
                   value={formData.name}
                   onChange={handleChange}
                   className="h-12 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 font-bold"
@@ -174,7 +171,6 @@ export default function Page() {
                 {errors.name && <p className="text-rose-500 text-[10px] font-bold uppercase mt-1 ml-1">{errors.name}</p>}
               </div>
 
-              {/* IP Address */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 ml-1">
                   <Network className="w-3 h-3 text-slate-400" />
@@ -212,7 +208,7 @@ export default function Page() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 ml-1">
                   <KeyRound className="w-3 h-3 text-slate-400" />
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Access Token</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Password</label>
                 </div>
                 <Input
                   type="password"

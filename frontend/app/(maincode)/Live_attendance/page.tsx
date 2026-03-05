@@ -6,30 +6,67 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Search, Radio, ShieldCheck, Activity, UserCheck } from "lucide-react";
 
-const cameras = [
-  { name: "herat", url: "http://localhost:8000/live_camera/herat", region: "West Sector" },
-  { name: "kabul", url: "http://localhost:8000/live_camera/kabul", region: "Central Sector" },
-  { name: "mazar", url: "http://localhost:8000/live_camera/mazar", region: "North Sector" },
-];
+// --- Interfaces ---
+interface Camera {
+  name: string;
+  url: string;
+  region: string;
+}
 
 type RecognizedPerson = {
   name: string;
-  image: string; // Should be "/path/to/image.jpg"
+  image: string;
   lastName: string;
 };
 
 const BASE_URL = "http://localhost:8000";
 
 export default function LiveCamerasPage() {
+  // 1. ALL HOOKS MUST BE AT THE TOP
+  const [cameras, setCameras] = useState<Camera[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [recognized, setRecognized] = useState<Record<string, RecognizedPerson>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Effect 1: Fetch Camera Names
+  useEffect(() => {
+    const fetchCameras = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/cameraname`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch cameras');
+        }
+
+        const names: string[] = await response.json();
+        
+        const transformedData: Camera[] = names.map((name) => ({
+          name: name,
+          url: `${BASE_URL}/live_camera/${name}`,
+          region: "Sector Alpha" // Logic can be updated here
+        }));
+
+        setCameras(transformedData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCameras();
+  }, []);
+
+  // Effect 2: Fetch Recognized Persons (Interval)
   useEffect(() => {
     const fetchRecognized = async () => {
       try {
         const res = await fetch(`${BASE_URL}/recognized`);
-        const data = await res.json();
-        setRecognized(data);
+        if (res.ok) {
+          const data = await res.json();
+          setRecognized(data);
+        }
       } catch (err) {
         console.error("Recognition fetch failed", err);
       }
@@ -40,18 +77,38 @@ export default function LiveCamerasPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // 2. HELPER LOGIC
   const filteredCameras = cameras.filter(cam => 
     cam.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Helper to ensure image URLs are formatted correctly
   const getImageUrl = (path: string) => {
     if (!path) return "";
-    // Prevents double slashes if path starts with /
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
     return `${BASE_URL}${cleanPath}`;
   };
 
+  // 3. CONDITIONAL RENDERS (Wait until loading is false)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#020617]">
+        <div className="flex flex-col items-center gap-4">
+          <Activity className="w-10 h-10 text-cyan-500 animate-spin" />
+          <p className="text-sm font-black uppercase tracking-widest dark:text-white">Initializing Uplink...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#020617]">
+        <div className="text-red-500 font-bold uppercase tracking-tighter">Error: {error}</div>
+      </div>
+    );
+  }
+
+  // 4. MAIN JSX
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#020617] p-4 transition-colors duration-500">
       
@@ -85,7 +142,7 @@ export default function LiveCamerasPage() {
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex flex-col items-end">
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Monitoring Nodes</span>
-            <span className="text-[10px] font-bold text-cyan-500 uppercase">03 Online</span>
+            <span className="text-[10px] font-bold text-cyan-500 uppercase">{cameras.length.toString().padStart(2, '0')} Online</span>
           </div>
           <ModeToggle />
         </div>
@@ -139,7 +196,7 @@ export default function LiveCamerasPage() {
                     }}
                   />
 
-                  {/* ✅ HUD Overlay for Recognized Person */}
+                  {/* HUD Overlay for Recognized Person */}
                   {person && person.name !== "Unknown" ? (
                     <div className="absolute inset-x-3 bottom-3 animate-in slide-in-from-bottom-4 fade-in duration-500 z-20">
                       <div className="bg-black/60 backdrop-blur-xl border border-white/20 text-white rounded-2xl p-3 flex items-center gap-4">
@@ -149,7 +206,7 @@ export default function LiveCamerasPage() {
                             alt={person.name}
                             className="w-12 h-12 rounded-xl object-cover border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.6)]"
                             onError={(e) => {
-                                (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=" + person.name + "&background=06b6d4&color=fff";
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${person.name}&background=06b6d4&color=fff`;
                             }}
                           />
                           <div className="absolute -top-1 -right-1 bg-cyan-500 p-0.5 rounded-full border border-black">
@@ -197,7 +254,6 @@ export default function LiveCamerasPage() {
         </div>
       </main>
 
-      {/* ===== GLOBAL CSS FOR SCANNING ===== */}
       <style jsx global>{`
         @keyframes scan {
           0% { top: 0%; opacity: 0; }
