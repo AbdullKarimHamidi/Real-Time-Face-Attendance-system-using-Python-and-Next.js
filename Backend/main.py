@@ -30,24 +30,24 @@ from pydantic import BaseModel
 import warnings
 warnings.filterwarnings("ignore")
 
-cameras = list(cameras_collection.find())
-full_address = []
-CAMERA_INDEX = {}
+# cameras = list(cameras_collection.find())
+# full_address = []
+# CAMERA_INDEX = {}
 
-for index, cam in enumerate(cameras):
-    cam_name = cam.get("camera_name")
-    username = cam.get("username")
-    password = cam.get("password")
-    ipaddress = cam.get("ipaddress")
-    port = cam.get("port", "554")
+# for index, cam in enumerate(cameras):
+#     cam_name = cam.get("camera_name")
+#     username = cam.get("username")
+#     password = cam.get("password")
+#     ipaddress = cam.get("ipaddress")
+#     port = cam.get("port", "554")
 
-    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
-    full_address.append(rtsp_url)
-    CAMERA_INDEX[cam_name] = rtsp_url
+#     rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
+#     full_address.append(rtsp_url)
+#     CAMERA_INDEX[cam_name] = rtsp_url
 
 # ================= CONFIG =================
 
-# CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "mazar": 2}
+CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "baghlan": "rtsp://admin:pam@12345@192.168.100.53:554/cam/realmonitor?channel=1&subtype=0",'mazar':"rtsp://admin:pam@12345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=0",'balkh':"rtsp://admin:pam@12345@192.168.100.52:554/cam/realmonitor?channel=1&subtype=0"}
 IMAGE_FOLDER = "engineers_images"
 ATT_INTERVAL = 3600 
 
@@ -118,8 +118,6 @@ def cameraName():
         names.append(camera.get("camera_name"))
     return names
 
-
-
 # ====================== route for Login =========================
 class datainfo(BaseModel):
     name:str
@@ -187,53 +185,53 @@ def specify_time(start: str = Form(...), end: str = Form(...)):
     start_end_time.insert_one({
         'start': start,
         'end': end,
-        'createdat':datetime.now().strftime("%Y-%m-%d")
+        "createdat": datetime.now()
     })
     return {"message": "Insert time is created successfully"}
 
 
 
-def getLatency(empemail: str):
-    employee = list(db.attendance_collection.find(
-        {'email': empemail},
-        {'_id': 0, 'entrance_time': 1, 'leaving_time': 1}
-    ))
+# def getLatency(empemail: str):
+#     employee = list(db.attendance_collection.find(
+#         {'email': empemail},
+#         {'_id': 0, 'entrance_time': 1, 'leaving_time': 1}
+#     ))
 
-    # Get scheduled work times
-    worktime = start_end_time.find_one({},sort=[("_id", -1)])
-    start_str = worktime['start'] if worktime else None
-    end_str = worktime['end'] if worktime else None
-    start_time = time(int(start_str), 0) if start_str else None
-    end_time = time(int(end_str), 0) if end_str else None
+#     # Get scheduled work times
+#     worktime = start_end_time.find_one({}, sort=[("createdat", -1)])
+#     start_str = worktime['start'] if worktime else None
+#     end_str = worktime['end'] if worktime else None
+#     start_time = time(int(start_str), 0) if start_str else None
+#     end_time = time(int(end_str), 0) if end_str else None
 
-    total_absent = timedelta(0)
+#     total_absent = timedelta(0)
 
-    for record in employee:
-        entrance_time = record.get('entrance_time')
-        leaving_time = record.get('leaving_time')
+#     for record in employee:
+#         entrance_time = record.get('entrance_time')
+#         leaving_time = record.get('leaving_time')
 
-        if not entrance_time or not leaving_time:
-            continue
+#         if not entrance_time or not leaving_time:
+#             continue
 
-        entrance = max(entrance_time, datetime.combine(entrance_time.date(), start_time))
-        leaving = min(leaving_time, datetime.combine(leaving_time.date(), end_time))
+#         entrance = max(entrance_time, datetime.combine(entrance_time.date(), start_time))
+#         leaving = min(leaving_time, datetime.combine(leaving_time.date(), end_time))
 
-        if entrance >= leaving:
-            day_absent = datetime.combine(entrance_time.date(), end_time) - datetime.combine(entrance_time.date(), start_time)
-        else:
-            # Late arrival
-            late = entrance - datetime.combine(entrance_time.date(), start_time) if entrance_time.time() > start_time else timedelta(0)
-            # Early leaving
-            early_leave = datetime.combine(leaving_time.date(), end_time) - leaving if leaving_time.time() < end_time else timedelta(0)
-            day_absent = late + early_leave
+#         if entrance >= leaving:
+#             day_absent = datetime.combine(entrance_time.date(), end_time) - datetime.combine(entrance_time.date(), start_time)
+#         else:
+#             # Late arrival
+#             late = entrance - datetime.combine(entrance_time.date(), start_time) if entrance_time.time() > start_time else timedelta(0)
+#             # Early leaving
+#             early_leave = datetime.combine(leaving_time.date(), end_time) - leaving if leaving_time.time() < end_time else timedelta(0)
+#             day_absent = late + early_leave
 
-        total_absent += day_absent
+#         total_absent += day_absent
 
-    # Convert to hours and minutes
-    hours = total_absent.seconds // 3600
-    minutes = (total_absent.seconds % 3600) // 60
+#     # Convert to hours and minutes
+#     hours = total_absent.seconds // 3600
+#     minutes = (total_absent.seconds % 3600) // 60
 
-    return {"employee_email": empemail, "total_late_hours": hours, "total_late_minutes": minutes}
+#     return {"employee_email": empemail, "total_late_hours": hours, "total_late_minutes": minutes}
     
 def takeAttendance(person_name: str, person_email: str):
     now = datetime.now()   
@@ -250,9 +248,12 @@ def takeAttendance(person_name: str, person_email: str):
         person =eng_collection.find_one({'email':person_email},{'_id':0,"tid":1})
         telegramid=int(person['tid'] if person else None)
         currenttime=datetime.now().strftime("%H-%M-%S")
+        worktime = start_end_time.find_one({}, sort=[("createdat", -1)])
+        # Ensure these are stored as integers/floats in the record
+        start_h = int(worktime['start']) if worktime else 9
+        end_h = int(worktime['end']) if worktime else 18
 
         if not record:
-            # No record yet → insert entrance
             db.attendance_collection.insert_one({
                 "name": person_name,
                 "email": person_email,
@@ -260,6 +261,8 @@ def takeAttendance(person_name: str, person_email: str):
                 "entrance_time": now,
                 "leaving_time": None,
                 "present": False,
+                'workstarts':start_h,
+                'workends':end_h,
                 "createdAt": today
             })
             
@@ -320,6 +323,54 @@ def takeAttendance(person_name: str, person_email: str):
             )
 
             send_message(user_id=telegramID, message=message)
+
+# def getLatency(empemail: str):
+#     # Fetch all records for this employee
+#     records = list(db.attendance_collection.find({'email': empemail}))
+    
+#     total_latency_seconds = 0
+
+#     for record in records:
+#         entrance = record.get('entrance_time')
+#         leaving = record.get('leaving_time')
+        
+#         # Get the daily shift hours from your document
+#         # In your JSON: "workstarts": 7, "workends": 21
+#         shift_start_h = record.get('workstarts')
+#         shift_end_h = record.get('workends')
+
+#         # Skip if data is missing for that day
+#         if not all([entrance, leaving, shift_start_h, shift_end_h]):
+#             continue
+
+#         # Create datetime objects for the shift boundaries on THAT day
+#         day_start = datetime.combine(entrance.date(), time(int(shift_start_h), 0))
+#         day_end = datetime.combine(entrance.date(), time(int(shift_end_h), 0))
+
+#         day_loss = 0
+
+#         # 1. Late Arrival: Jack arrived at 11:58 but shift started at 07:00
+#         if entrance > day_start:
+#             arrival_delay = (entrance - day_start).total_seconds()
+#             day_loss += arrival_delay
+
+#         # 2. Early Departure: Jack left at 11:59 but shift ends at 21:00
+#         if leaving < day_end:
+#             early_departure = (day_end - leaving).total_seconds()
+#             day_loss += early_departure
+            
+#         total_latency_seconds += day_loss
+
+#     # Convert total accumulated seconds to Hours and Minutes
+#     hours = int(total_latency_seconds // 3600)
+#     minutes = int((total_latency_seconds % 3600) // 60)
+
+#     return {
+#         "employee_email": empemail,
+#         "total_late_hours": hours,
+#         "total_late_minutes": minutes
+#     }
+
 def upsence_attendance():
     todayname=datetime.now().strftime("%A")
     if todayname!='Friday':
@@ -331,6 +382,9 @@ def upsence_attendance():
             {"email": 1}
         )
         engemails={erf['email'] for erf in today_attendance}
+        worktime = start_end_time.find_one({}, sort=[("createdat", -1)])
+        start_time=worktime['start'] if worktime else None
+        end_time=worktime['end'] if worktime else None
         for eng in AllEngineers:
             if eng['email'] not in engemails:
                 db.attendance_collection.insert_one({
@@ -340,6 +394,8 @@ def upsence_attendance():
                     'entrance_time':None,
                     'leaving_time':None,
                     'present':False,
+                    'workstarts':start_time,
+                    'workends':end_time,
                     "createdAt":today
                 })
                 engId=int(eng['tid'] if eng else None)
@@ -483,6 +539,7 @@ async def add_engineer(
     np.save(os.path.join(EMB_DIR, "names.npy"), face_names)
     np.save(os.path.join(EMB_DIR, "emails.npy"), face_emails)
     custom_id = generate_custom_id()
+    
 
     db.insert_one({
         'custom':custom_id,
@@ -551,51 +608,69 @@ def getbyID(eng_id: str):
 
 # =====================Get all attendances for a one person based on Id===============
 
-@app.get('/allattendance/{eng_email}')
-def getallattendance(eng_email: str):
 
-    attendances = list(
-        db.attendance_collection.find({"email": eng_email})
-    )
+@app.get("/allattendance/{eng_email}")
+def get_all_attendance(eng_email: str):
+
+    attendances = list(db.attendance_collection.find({"email": eng_email}))
 
     if not attendances:
         raise HTTPException(status_code=404, detail="No attendance found")
 
-    worktime = start_end_time.find_one()
-    work_start = time(int(worktime["start"]), 0)
-    work_end = time(int(worktime["end"]), 0)
-
     results = []
 
     for atd in attendances:
+
         entrance_time = atd.get("entrance_time")
         leaving_time = atd.get("leaving_time")
 
+        shift_start_h = atd.get("workstarts", 9)
+        shift_end_h = atd.get("workends", 18)
+
         latency_minutes = 0
 
+        if entrance_time:
+            entrance_time = entrance_time.replace(tzinfo=None)
+
+        if leaving_time:
+            leaving_time = leaving_time.replace(tzinfo=None)
+
         if entrance_time and leaving_time:
-            work_start_dt = datetime.combine(entrance_time.date(), work_start)
-            work_end_dt = datetime.combine(leaving_time.date(), work_end)
 
-            # Clamp times
-            actual_start = max(entrance_time, work_start_dt)
-            actual_end = min(leaving_time, work_end_dt)
+            # Shift boundaries
+            work_start_dt = datetime.combine(
+                entrance_time.date(), time(int(shift_start_h), 0)
+            )
 
-            # Total expected work time
-            expected_work = work_end_dt - work_start_dt
+            work_end_dt = datetime.combine(
+                entrance_time.date(), time(int(shift_end_h), 0)
+            )
 
-            # Actual worked time
-            worked_time = max(actual_end - actual_start, timedelta(0))
+            # Late arrival
+            late_arrival = 0
+            if entrance_time > work_start_dt:
+                late_arrival = (entrance_time - work_start_dt).total_seconds()
 
-            # Latency = time not worked
-            absent_time = expected_work - worked_time
-            latency_minutes = max(int(absent_time.total_seconds() // 60), 0)
+            # Early leaving
+            early_leave = 0
+            if leaving_time < work_end_dt:
+                early_leave = (work_end_dt - leaving_time).total_seconds()
 
+            latency_minutes = int((late_arrival + early_leave) // 60)
+
+        # Clean Mongo ID
         atd["_id"] = str(atd["_id"])
-        atd["latency"] = latency_minutes  
-        results.append(atd)
-    return results
 
+        # Add latency
+        atd["latency"] = latency_minutes
+
+        # Convert datetime to ISO format (IMPORTANT for frontend)
+        atd["entrance_time"] = entrance_time.isoformat() if entrance_time else None
+        atd["leaving_time"] = leaving_time.isoformat() if leaving_time else None
+
+        results.append(atd)
+
+    return results
 
 def camera_worker(camera_name: str, index: int):
     cap = cv2.VideoCapture(index)
@@ -803,8 +878,6 @@ async def update_engineer(
     )
 
     return {"message": f"Engineer {name} updated successfully"}
-
-
 
 
 @app.delete("/delete-engineer/{eng_id}")

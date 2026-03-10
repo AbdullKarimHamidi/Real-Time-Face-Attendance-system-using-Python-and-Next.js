@@ -69,10 +69,10 @@ export default function DashboardCard() {
       {/* ===== TOP TECHNICAL STATS ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: "Network Registry", val: countEngineers, icon: <Users className="w-4 h-4" />, color: "text-blue-500", glow: "bg-blue-500/10" },
-          { title: "Active Nodes", val: presentedEMps, icon: <ShieldCheck className="w-4 h-4" />, color: "text-emerald-500", glow: "bg-emerald-500/10" },
-          { title: "Offline Links", val: upsents, icon: <User className="w-4 h-4" />, color: "text-red-500", glow: "bg-red-500/10" },
-          { title: "System Latency", val: "12ms", icon: <Zap className="w-4 h-4" />, color: "text-amber-500", glow: "bg-amber-500/10" },
+          { title: "Number of employees", val: countEngineers, icon: <Users className="w-4 h-4" />, color: "text-blue-500", glow: "bg-blue-500/10" },
+          { title: "Presented Today", val: presentedEMps, icon: <ShieldCheck className="w-4 h-4" />, color: "text-emerald-500", glow: "bg-emerald-500/10" },
+          { title: "Upsent Today", val: upsents, icon: <User className="w-4 h-4" />, color: "text-red-500", glow: "bg-red-500/10" },
+          { title: "EMP Latency", val: "12ms", icon: <Zap className="w-4 h-4" />, color: "text-amber-500", glow: "bg-amber-500/10" },
         ].map((item, i) => (
           <Card key={i} className="border-none bg-white dark:bg-white/5 rounded-[1.5rem] shadow-sm overflow-hidden relative">
             <div className={`absolute top-0 left-0 w-1 h-full ${item.color.replace('text', 'bg')}`} />
