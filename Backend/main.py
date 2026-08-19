@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, File, UploadFile,Response
+from fastapi import FastAPI, Form, File, UploadFile,Response,Request
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import cv2
@@ -12,6 +12,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from database.db import eng_collection as db
 from database.db import eng_collection
+from database.db import holidays_collection
 from urllib.parse import quote
 from telegram_service import send_message,start_telegram_bot
 from pymongo import DESCENDING
@@ -30,25 +31,31 @@ from pydantic import BaseModel
 import warnings
 warnings.filterwarnings("ignore")
 
-# cameras = list(cameras_collection.find())
-# full_address = []
-# CAMERA_INDEX = {}
+from urllib.parse import quote
+cameras = list(cameras_collection.find())
+full_address = []
+CAMERA_INDEX = {}
+for index, cam in enumerate(cameras):
+    cam_name = cam.get("camera_name")
+    username = cam.get("username")
+    password = cam.get("password")
+    ipaddress = cam.get("ipaddress")
+    port = cam.get("port", "554")
 
-# for index, cam in enumerate(cameras):
-#     cam_name = cam.get("camera_name")
-#     username = cam.get("username")
-#     password = cam.get("password")
-#     ipaddress = cam.get("ipaddress")
-#     port = cam.get("port", "554")
+    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
+    full_address.append(rtsp_url)
+    CAMERA_INDEX[cam_name] = rtsp_url
 
-#     rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
-#     full_address.append(rtsp_url)
-#     CAMERA_INDEX[cam_name] = rtsp_url
-
+password = "pam@12345"
 # ================= CONFIG =================
+# CAMERA_INDEX = {"herat": f"rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1",
+#                  "kabul":f'rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1',
+#                   'mazar':0
+#                   }
 
-CAMERA_INDEX = {"herat": "rtsp://admin:D@iNas0r@192.168.100.51:554/cam/realmonitor?channel=1&subtype=0", "kabul":1, "baghlan": "rtsp://admin:pam@12345@192.168.100.53:554/cam/realmonitor?channel=1&subtype=0",'mazar':"rtsp://admin:pam@12345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=0",'balkh':"rtsp://admin:pam@12345@192.168.100.52:554/cam/realmonitor?channel=1&subtype=0"}
+
 IMAGE_FOLDER = "engineers_images"
+
 ATT_INTERVAL = 3600 
 
 # ================= GLOBAL STATE =================
@@ -68,7 +75,10 @@ os.makedirs(EMB_DIR, exist_ok=True)
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
 # ================= FACE MODEL =================
-face_app = FaceAnalysis(name="buffalo_l", providers=['CUDAExecutionProvider','CPUExecutionProvider'])
+face_app = FaceAnalysis(
+    name="buffalo_l",
+    providers=['GPUExecutionProvider']
+)
 face_app.prepare(ctx_id=0, det_size=(320,320))
 
 
@@ -506,6 +516,8 @@ async def add_engineer(
     new_names = []
     new_emails = []
 
+
+
     for i, img in enumerate(images):
         ext = os.path.splitext(img.filename)[1]
         filename = f"{name}_{int(datetime.now().timestamp())}_{i}{ext}"
@@ -611,16 +623,11 @@ def getbyID(eng_id: str):
 
 @app.get("/allattendance/{eng_email}")
 def get_all_attendance(eng_email: str):
-
     attendances = list(db.attendance_collection.find({"email": eng_email}))
-
     if not attendances:
         raise HTTPException(status_code=404, detail="No attendance found")
-
     results = []
-
     for atd in attendances:
-
         entrance_time = atd.get("entrance_time")
         leaving_time = atd.get("leaving_time")
 
@@ -672,18 +679,110 @@ def get_all_attendance(eng_email: str):
 
     return results
 
+# def camera_worker(camera_name: str, index: int):
+#     cap = cv2.VideoCapture(index)
+#     if not cap.isOpened():
+#         print(f"Camera {camera_name} failed")
+#         return
+
+#     while True:
+#         ret, frame = cap.read()
+#         if not ret:
+#             continue
+#         faces = face_app.get(frame, max_num=4)
+#         if faces:
+#             for face in faces:
+#                 x1, y1, x2, y2 = map(int, face.bbox)
+#                 emb = face.embedding.reshape(1, -1)
+#                 display_name = "Unknown"
+#                 person_name = ""
+#                 person_email = ""
+#                 telegram_id = None
+#                 if face_embeddings.shape[0] > 0:
+#                     sims = cosine_similarity(emb, face_embeddings)
+#                     idx = np.argmax(sims)
+#                     if sims[0][idx] > 0.5:
+#                         person_email = face_emails[idx]
+#                         full_name = face_names[idx] 
+#                         person_name = full_name
+#                         display_name = full_name.split('_')[0]
+#                         user = eng_collection.find_one({'email': person_email}, {'_id': 0, 'tid': 1})
+#                         telegram_id = int(user['tid']) if user else None
+#                         if telegram_id:
+#                             action = check_attendance_request(telegram_id)
+#                             if action == "entrance" or action=='exit':
+#                                 today_name = datetime.now().strftime("%A")
+#                                 if today_name != 'Friday':
+#                                     takeAttendance(person_name, person_email)
+#                                     print(f"[TELEGRAM ENTERANCE] {display_name} marked attendance via Telegram button")
+#                         with recognized_lock:
+#                             recognized_per_camera[camera_name] = {
+#                                 "name": person_name,
+#                                 "image": f"/engineer_image/{person_name}"
+#                             }
+#                         COLOR_MATCHED = (238, 211, 34)  
+#                         COLOR_UNKNOWN = (80, 70, 244)  
+#                         text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
+#                         cv2.putText(
+#                             frame,
+#                             display_name.upper(),
+#                             (x1, y1 - 12),
+#                             cv2.FONT_HERSHEY_SIMPLEX,
+#                             0.6,               
+#                             text_color,
+#                             2,                 
+#                             cv2.LINE_AA       
+#                         )
+#                 COLOR_CYAN = (238, 211, 34)   
+#                 COLOR_DANGER = (80, 70, 244) 
+#                 rect_color = COLOR_CYAN if display_name != "Unknown" else COLOR_DANGER
+#                 All.draw_focus_box(frame, x1, y1, x2 - x1, y2 - y1)
+#                 All.Draw_rectagle(frame, x1, y1, x2, y2, rect_color, 1)
+
+
+#         with frame_locks[camera_name]:
+#             camera_frames[camera_name] = frame.copy()
+
+#         current_time = datetime.now().time()
+#         if dt_time(17, 0) <= current_time <= dt_time(18, 0):
+#             upsence_attendance()
+
+#     cap.release()
+
 def camera_worker(camera_name: str, index: int):
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
         print(f"Camera {camera_name} failed")
         return
+    frame_count = 0
+    PROCESS_EVERY_N_FRAMES = 2  # Skip every alternate frame for heavy AI processing to boost FPS
 
     while True:
         ret, frame = cap.read()
         if not ret:
             continue
+        frame_count += 1
+        
+        # Optional: Skip heavy processing on certain frames to maintain high streaming FPS
+        if frame_count % PROCESS_EVERY_N_FRAMES != 0:
+            with frame_locks[camera_name]:
+                camera_frames[camera_name] = frame.copy()
+            continue
+
+        # 1️⃣ FAST CHECK: Detect faces first with optimized detection size
+        # det_size=(320, 320) provides a great balance of speed and accuracy for surveillance
         faces = face_app.get(frame, max_num=4)
 
+        # 2️⃣ IF NO FACES: Skip all heavy recognition/database logic and just show the stream
+        if not faces:
+            with recognized_lock:
+                continue
+                # recognized_per_camera[camera_name] = {"name": "No face", "image": ""}
+            with frame_locks[camera_name]:
+                camera_frames[camera_name] = frame.copy()
+            continue
+
+        # 3️⃣ IF FACES EXIST: Process embeddings and recognition only when needed
         for face in faces:
             x1, y1, x2, y2 = map(int, face.bbox)
             emb = face.embedding.reshape(1, -1)
@@ -691,59 +790,63 @@ def camera_worker(camera_name: str, index: int):
             person_name = ""
             person_email = ""
             telegram_id = None
+
             if face_embeddings.shape[0] > 0:
+                # Vectorized cosine similarity
                 sims = cosine_similarity(emb, face_embeddings)
                 idx = np.argmax(sims)
-                if sims[0][idx] > 0.5:
+                
+                # Increased threshold slightly to 0.55 for better accuracy/fewer false positives
+                if sims[0][idx] > 0.55:
                     person_email = face_emails[idx]
                     full_name = face_names[idx] 
                     person_name = full_name
                     display_name = full_name.split('_')[0]
+                    
                     user = eng_collection.find_one({'email': person_email}, {'_id': 0, 'tid': 1})
                     telegram_id = int(user['tid']) if user else None
+                    
                     if telegram_id:
                         action = check_attendance_request(telegram_id)
-                        if action == "entrance" or action=='exit':
+                        if action in ["entrance", "exit"]:
                             today_name = datetime.now().strftime("%A")
                             if today_name != 'Friday':
                                 takeAttendance(person_name, person_email)
-                                print(f"[TELEGRAM ENTERANCE] {display_name} marked attendance via Telegram button")
+                                print(f"[TELEGRAM] {display_name} marked attendance")
+
                     with recognized_lock:
                         recognized_per_camera[camera_name] = {
                             "name": person_name,
                             "image": f"/engineer_image/{person_name}"
                         }
-                    COLOR_MATCHED = (238, 211, 34)  
-                    COLOR_UNKNOWN = (80, 70, 244)  
-                    text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
-                    cv2.putText(
-                        frame,
-                        display_name.upper(),
-                        (x1, y1 - 12),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.6,               
-                        text_color,
-                        2,                 
-                        cv2.LINE_AA       
-                    )
-            COLOR_CYAN = (238, 211, 34)   
-            COLOR_DANGER = (80, 70, 244) 
-            rect_color = COLOR_CYAN if display_name != "Unknown" else COLOR_DANGER
+
+            # Drawing Overlays
+            COLOR_MATCHED = (238, 211, 34)  
+            COLOR_UNKNOWN = (80, 70, 244)  
+            text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
+            
+            cv2.putText(
+                frame,
+                display_name.upper(),
+                (x1, y1 - 12),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,            
+                text_color,
+                2,               
+                cv2.LINE_AA       
+            )
+            rect_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
             All.draw_focus_box(frame, x1, y1, x2 - x1, y2 - y1)
             All.Draw_rectagle(frame, x1, y1, x2, y2, rect_color, 1)
-
 
         with frame_locks[camera_name]:
             camera_frames[camera_name] = frame.copy()
 
-  
         current_time = datetime.now().time()
         if dt_time(17, 0) <= current_time <= dt_time(18, 0):
             upsence_attendance()
 
     cap.release()
-
-
 @app.get('/countall')
 def CounallEngs():
     count=eng_collection.count_documents({})
@@ -758,8 +861,6 @@ def countPresented():
     })
     return {"message":countP}
   
-
-
 # =================== get A Engineer based on the ID ===========
 
 @app.get("/specific/{eng_id}")
@@ -878,8 +979,6 @@ async def update_engineer(
     )
 
     return {"message": f"Engineer {name} updated successfully"}
-
-
 @app.delete("/delete-engineer/{eng_id}")
 async def delete_engineer(eng_id: str):
     global face_embeddings, face_names, face_emails
@@ -926,9 +1025,30 @@ def ussentEmps():
         'present':False
     })
     return {"upsentEmp":countUps}
-
-
 # ================= START CAMERA THREADS =================
+# rout for adding the holidays in the system 
+
+
+
+# route for adding the holidays in the system
+@app.post("/addholiday")
+async def addholiday(request: Request):
+    data = await request.json()
+
+    holiday = {
+        "name": data["name"],
+        "start_date": data["start_date"],
+        "end_date": data["end_date"],
+        "isActive": True,
+        "createAt":datetime.now()
+    }
+
+    result = holidays_collection.insert_one(holiday)
+
+    return {
+        "msg": "Holiday was created",
+        "id": str(result.inserted_id)
+    }
 @app.on_event("startup")
 def start_cameras():
     for name, index in CAMERA_INDEX.items():

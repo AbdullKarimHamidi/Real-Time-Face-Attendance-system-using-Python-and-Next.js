@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -18,17 +19,22 @@ function OnePersonReport() {
   const [engineer, setEngineer] = useState(null);
   const [engId, setEngID] = useState("EMP0000");
   const [attendances, setAttendances] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(""); // YYYY-MM format
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   /* ================= FETCH ENGINEER ================= */
+
   const fetchEngineer = async () => {
     if (!engId) return;
+
     try {
       const res = await fetch(`http://localhost:8000/eng/${engId}`);
+
       if (!res.ok) {
         setEngineer(null);
+        setAttendances([]);
         return;
       }
+
       const data = await res.json();
       setEngineer(data);
     } catch (err) {
@@ -38,6 +44,7 @@ function OnePersonReport() {
   };
 
   /* ================= FETCH ATTENDANCES ================= */
+
   useEffect(() => {
     if (!engineer?.email) return;
 
@@ -46,8 +53,16 @@ function OnePersonReport() {
         const res = await fetch(
           `http://localhost:8000/allattendance/${engineer.email}`
         );
+
         const data = await res.json();
-        setAttendances(data);
+
+        if (Array.isArray(data)) {
+          setAttendances(data);
+        } else if (Array.isArray(data.attendance)) {
+          setAttendances(data.attendance);
+        } else {
+          setAttendances([]);
+        }
       } catch (err) {
         console.error(err);
         setAttendances([]);
@@ -58,33 +73,35 @@ function OnePersonReport() {
   }, [engineer]);
 
   /* ================= REFRESH ENGINEER ================= */
+
   useEffect(() => {
     fetchEngineer();
   }, [engId]);
 
   /* ================= HELPERS ================= */
-  const formatDate = (dateString) =>
-    dateString
-      ? new Date(dateString).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : "";
 
-  const formatTime = (dateString) =>
-    dateString
-      ? new Date(dateString).toLocaleTimeString("en-GB", {
-          hour12: false,
-        })
-      : "";
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
-  const formatDay = (dateString) =>
-    dateString
-      ? new Date(dateString).toLocaleDateString("en-GB", {
-          weekday: "long",
-        })
-      : "";
+  const formatTime = (dateString) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleTimeString("en-GB", {
+      hour12: false,
+    });
+  };
+
+  const formatDay = (dateString) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      weekday: "long",
+    });
+  };
 
   const formatLatency = (minutes = 0) => {
     if (!minutes || minutes <= 0) return "0 min";
@@ -103,127 +120,138 @@ function OnePersonReport() {
     );
   };
 
-  /* ================= GROUP ATTENDANCES BY MONTH ================= */
-  const groupedAttendances = attendances.reduce((acc, curr) => {
-    const date = new Date(curr.entrance_time || curr.leaving_time);
-    if (!date) return acc;
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    if (!acc[monthKey]) acc[monthKey] = [];
+  /* ================= GROUP ATTENDANCES ================= */
+
+  const groupedAttendances = (
+    Array.isArray(attendances) ? attendances : []
+  ).reduce((acc, curr) => {
+    const dateValue = curr.entrance_time || curr.leaving_time;
+    if (!dateValue) return acc;
+
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return acc;
+
+    const monthKey = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+
     acc[monthKey].push(curr);
     return acc;
   }, {});
 
-  /* ================= FILTER MONTHS ================= */
-  const availableMonths = Object.keys(groupedAttendances).sort((a, b) => b.localeCompare(a));
+  const availableMonths = Object.keys(groupedAttendances).sort((a, b) =>
+    b.localeCompare(a)
+  );
+
   const displayedMonths = selectedMonth ? [selectedMonth] : availableMonths;
 
-  /* ================= UI ================= */
   return (
-    <div className="w-full">
-      {/* Search & Filter */}
-      <div className="w-full mt-3 mb-3 flex gap-3 print:hidden">
-        <Input
-          value={engId}
-          onChange={(e) => setEngID(e.target.value)}
-          placeholder="Search By ID ..."
-          className="w-fit"
-        />
-        <select
-          className="border px-2 rounded"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        >
-          <option value="">All Months</option>
-          {availableMonths.map((m) => (
-            <option key={m} value={m}>
-              {new Date(m + "-01").toLocaleString("en-GB", { month: "long", year: "numeric" })}
-            </option>
-          ))}
-        </select>
-        <Button variant="outline" size="sm" onClick={() => window.print()}>
+    <div className="w-full max-w-5xl mx-auto px-4 py-4">
+      {/* SEARCH & CONTROLS */}
+      <div className="w-full mb-6 flex flex-wrap gap-3 items-center justify-between print:hidden bg-card border p-4 rounded-xl shadow-sm">
+        <div className="flex gap-3 items-center">
+          <Input
+            value={engId}
+            onChange={(e) => setEngID(e.target.value)}
+            placeholder="Search By ID ..."
+            className="w-48 bg-background"
+          />
+
+          <select
+            className="border bg-background px-3 py-2 rounded-md text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            <option value="">All Months</option>
+            {availableMonths.map((m) => (
+              <option key={m} value={m}>
+                {new Date(m + "-01").toLocaleString("en-GB", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Button variant="default" size="sm" onClick={() => window.print()}>
           Print Report
         </Button>
       </div>
 
+      {/* REPORT CONTENT */}
       {displayedMonths.map((monthKey) => (
-        <div key={monthKey} className="mb-8 page-break">
-          <Card>
-            {/* HEADER */}
-            <CardHeader className="flex justify-between p-5 flex-col md:flex-row">
-              <div className="flex gap-16">
-                <div className="font-bold space-y-2">
-                  <p>Name:</p>
-                  <p>Last Name:</p>
-                  <p>Address:</p>
-                  <p>Start Date:</p>
-                  <p>Months Worked:</p>
-                </div>
+        <div key={monthKey} className="mb-4 printable-section">
+          <Card className="overflow-hidden border shadow-sm print:shadow-none print:border-none">
+            {/* COMPACT HEADER */}
+            <CardHeader className="bg-muted/40 p-4 flex flex-row justify-between items-center print:bg-transparent print:p-2">
+              <div className="flex gap-10 items-center">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:text-sm">
+                  <span className="text-muted-foreground font-medium">Name:</span>
+                  <span className="font-semibold text-foreground">{engineer?.name || "—"}</span>
 
-                {engineer && (
-                  <div className="font-semibold space-y-2">
-                    <p>{engineer.name}</p>
-                    <p>{engineer.lastName}</p>
-                    <p>{engineer.address}</p>
-                    <p>{formatDate(engineer.created_at)}</p>
-                    <p>{monthsWorked(engineer.created_at)}</p>
-                  </div>
-                )}
+                  <span className="text-muted-foreground font-medium">Last Name:</span>
+                  <span className="font-semibold text-foreground">{engineer?.lastName || "—"}</span>
+
+                  <span className="text-muted-foreground font-medium">Address:</span>
+                  <span className="font-semibold text-foreground">{engineer?.address || "—"}</span>
+
+                  <span className="text-muted-foreground font-medium">Start Date:</span>
+                  <span className="font-semibold text-foreground">{formatDate(engineer?.created_at)}</span>
+
+                  <span className="text-muted-foreground font-medium">Months Worked:</span>
+                  <span className="font-semibold text-foreground">{monthsWorked(engineer?.created_at)}</span>
+                </div>
               </div>
 
               <img
                 src={engineer?.image || "/placeholder.png"}
-                className="w-40 h-40 rounded-xl object-cover"
-                onError={(e) => (e.target.src = "/placeholder.png")}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border shadow-sm print:w-20 print:h-20"
+                onError={(e) => (e.currentTarget.src = "/placeholder.png")}
               />
             </CardHeader>
 
-            {/* TABLE */}
-            <CardContent>
+            <CardContent className="p-3 sm:p-6 print:p-2">
               <Table>
-                <TableCaption>
+                <TableCaption className="text-[11px] text-muted-foreground mt-1">
                   Attendance Records -{" "}
                   {new Date(monthKey + "-01").toLocaleString("en-GB", {
                     month: "long",
                     year: "numeric",
                   })}
                 </TableCaption>
+
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Enter</TableHead>
-                    <TableHead>Exit</TableHead>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Latency</TableHead>
-                    <TableHead>Status</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-1.5 text-xs">Date</TableHead>
+                    <TableHead className="py-1.5 text-xs">Enter</TableHead>
+                    <TableHead className="py-1.5 text-xs">Exit</TableHead>
+                    <TableHead className="py-1.5 text-xs">Day</TableHead>
+                    <TableHead className="py-1.5 text-xs">Latency</TableHead>
+                    <TableHead className="py-1.5 text-xs">Status</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
                   {groupedAttendances[monthKey]?.length > 0 ? (
                     groupedAttendances[monthKey].map((a, i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          {a.entrance_time ? formatDate(a.entrance_time) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {a.entrance_time ? formatTime(a.entrance_time) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {a.leaving_time ? formatTime(a.leaving_time) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {a.entrance_time ? formatDay(a.entrance_time) : "—"}
-                        </TableCell>
-                        <TableCell className="font-semibold text-orange-600">
-                          {formatLatency(a.latency)}
-                        </TableCell>
-                        <TableCell>
+                      <TableRow key={i} className="text-xs print:text-[11px]">
+                        <TableCell className="py-1.5">{formatDate(a.entrance_time)}</TableCell>
+                        <TableCell className="py-1.5">{formatTime(a.entrance_time)}</TableCell>
+                        <TableCell className="py-1.5">{formatTime(a.leaving_time)}</TableCell>
+                        <TableCell className="py-1.5">{formatDay(a.entrance_time)}</TableCell>
+                        <TableCell className="py-1.5">{formatLatency(a.latency)}</TableCell>
+                        <TableCell className="py-1.5">
                           {a.present ? (
-                            <span className="bg-green-500 px-2 rounded text-white">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                               Present
                             </span>
                           ) : (
-                            <span className="bg-red-500 px-2 rounded text-white">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                               Absent
                             </span>
                           )}
@@ -232,8 +260,8 @@ function OnePersonReport() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
-                        No attendance found
+                      <TableCell colSpan={6} className="text-center py-4 text-muted-foreground text-xs">
+                        No attendance found for this period
                       </TableCell>
                     </TableRow>
                   )}
@@ -244,22 +272,38 @@ function OnePersonReport() {
         </div>
       ))}
 
-      {/* PRINT STYLES */}
+      {/* STRICT SINGLE-PAGE PRINT STYLING */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 6mm;
+          }
+
+          body {
+            background: white !important;
+            color: black !important;
+            zoom: 78%;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
           body * {
             visibility: hidden;
           }
-          .page-break {
-            page-break-after: always;
-          }
-          .page-break,
-          .page-break * {
+
+          .printable-section,
+          .printable-section * {
             visibility: visible;
           }
-          .page-break {
-            position: relative;
+
+          .printable-section {
+            position: absolute;
+            left: 0;
+            top: 0;
             width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
         }
       `}</style>

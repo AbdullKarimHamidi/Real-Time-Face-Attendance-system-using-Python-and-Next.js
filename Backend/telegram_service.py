@@ -2,7 +2,6 @@
 import asyncio
 import threading
 from datetime import datetime, timedelta
-
 from telegram import (
     Bot,
     Update,
@@ -16,7 +15,6 @@ from telegram.ext import (
     ContextTypes,
 )
 from telegram.error import BadRequest
-
 BOT_TOKEN = "8502606814:AAHJwITJ28_yM1SZchrUV_laLwuRGHAZP6A"
 TIMEOUT_SECONDS = 300
 
@@ -37,7 +35,6 @@ def get_keyboard():
             InlineKeyboardButton("🔴 Exit", callback_data="exit"),
         ]]
     )
-
 # ================= TELEGRAM BOT =================
 def start_telegram_bot():
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -48,7 +45,7 @@ def start_telegram_bot():
             await update.message.reply_text(
                 f"👤 Hello {user.first_name}\n"
                 f"Your Telegram ID is:\n\n"
-                f"`{telegram_id}`",
+                f"`{telegram_id}'`",
                 parse_mode="Markdown"
             )
             users_sent_id.add(telegram_id)
@@ -85,10 +82,8 @@ def start_telegram_bot():
         except BadRequest as e:
             if "Message is not modified" not in str(e):
                 raise e
-
     def run_bot():
         global bot, event_loop, message_queue
-
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
 

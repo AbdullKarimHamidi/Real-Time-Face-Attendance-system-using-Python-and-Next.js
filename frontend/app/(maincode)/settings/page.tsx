@@ -1,3 +1,4 @@
+
 "use client";
 
 import { ModeToggle } from "@/components/Toggle";
@@ -8,11 +9,10 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, Save, Settings2, ShieldCheck, Sparkles } from "lucide-react";
+import { Clock, CalendarDays, Save, ShieldCheck, Sparkles } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +21,12 @@ function Page() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // New states for Holiday Management
+  const [holidayName, setHolidayName] = useState("");
+  const [holidayStart, setHolidayStart] = useState("");
+  const [holidayEnd, setHolidayEnd] = useState("");
+  const [isSavingHoliday, setIsSavingHoliday] = useState(false);
 
   const add_time = async () => {
     if (!startTime || !endTime) {
@@ -48,14 +54,60 @@ function Page() {
         return;
       }
 
-      toast.success("System Clock Updated", {
-        description: `Operational window set: ${startTime}:00 to ${endTime}:00`,
+      toast.success("Time configuration updated", {
+        description: `Operational system is set for: ${startTime}:00 to ${endTime}:00`,
       });
     } catch (error) {
       toast.error("Server Connection Error");
       console.error(error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const add_holiday = async () => {
+    if (!holidayName || !holidayStart || !holidayEnd) {
+      toast.error("Missing Fields", {
+        description: "Please provide a holiday name, start date, and end date.",
+      });
+      return;
+    }
+
+    setIsSavingHoliday(true);
+
+    try {
+      const res = await fetch("http://localhost:8000/addholiday", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: holidayName,
+          start_date: holidayStart,
+          end_date: holidayEnd,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error(result.message || "Failed to add holiday");
+        return;
+      }
+
+      toast.success("Holiday Created", {
+        description: `${holidayName} has been successfully added to the system.`,
+      });
+
+      // Clear form inputs
+      setHolidayName("");
+      setHolidayStart("");
+      setHolidayEnd("");
+    } catch (error) {
+      toast.error("Server Connection Error");
+      console.error(error);
+    } finally {
+      setIsSavingHoliday(false);
     }
   };
 
@@ -104,7 +156,7 @@ function Page() {
             </div>
           </div>
 
-          {/* SETTINGS CARD */}
+          {/* SETTINGS CARD (SHIFT PARAMETERS) */}
           <Card className="lg:col-span-8 border-none bg-white/80 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/5 overflow-hidden">
             <CardHeader className="pt-10 px-10 pb-2">
               <div className="flex items-center gap-2 mb-2">
@@ -195,6 +247,83 @@ function Page() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* NEW HOLIDAY MANAGEMENT CARD */}
+          <Card className="lg:col-span-12 border-none bg-white/80 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/5 overflow-hidden">
+            <CardHeader className="pt-10 px-10 pb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Calendar Exceptions</CardDescription>
+              </div>
+              <CardTitle className="text-3xl font-black italic uppercase tracking-tighter">Holiday <span className="text-blue-500">Registry</span></CardTitle>
+            </CardHeader>
+
+            <CardContent className="p-10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* HOLIDAY NAME */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 ml-1">
+                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Holiday Name</label>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g., New Year's Day"
+                    value={holidayName}
+                    onChange={(e) => setHolidayName(e.target.value)}
+                    className="h-14 w-full rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* START DATE */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 ml-1">
+                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Start Date</label>
+                  </div>
+                  <input
+                    type="date"
+                    value={holidayStart}
+                    onChange={(e) => setHolidayStart(e.target.value)}
+                    className="h-14 w-full rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* END DATE */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 ml-1">
+                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">End Date</label>
+                  </div>
+                  <input
+                    type="date"
+                    value={holidayEnd}
+                    onChange={(e) => setHolidayEnd(e.target.value)}
+                    className="h-14 w-full rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-4 text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <Button 
+                className="mt-10 h-16 w-full rounded-[1.5rem] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] italic shadow-xl shadow-emerald-500/30 transition-all hover:scale-[1.01] active:scale-[0.98] hover:cursor-pointer"
+                onClick={add_holiday}
+                disabled={isSavingHoliday}
+              >
+                {isSavingHoliday ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving Holiday...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="w-4 h-4" /> Save Holiday
+                  </div>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+       
         </div>
       </div>
     </div>

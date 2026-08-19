@@ -29,7 +29,7 @@ export default function Home() {
             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
               Live Neural Uplink // 2026
             </span>
-          </div>
+          </div>+
           <h1 className="text-5xl font-black tracking-tighter uppercase italic">
             Global <span className="text-cyan-500">Surveillance</span> Wall
           </h1>

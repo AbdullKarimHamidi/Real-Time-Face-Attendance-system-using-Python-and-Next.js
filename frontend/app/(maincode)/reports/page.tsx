@@ -1,7 +1,7 @@
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import All_users_report from "./_components/AllEngineersReport";
-import OnePersonReport from './_components/OnePersonReport'
+
 import MonthReport from "./_components/monthreports";
 import Image from "next/image";
 import { ModeToggle } from "@/components/Toggle";
@@ -14,6 +14,7 @@ import {
   Activity,
   ArrowRight
 } from "lucide-react";
+import OnePersonReport from "./_components/OnePersonReport";
 
 function Page() {
   return (
