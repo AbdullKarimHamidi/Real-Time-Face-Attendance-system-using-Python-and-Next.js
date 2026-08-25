@@ -25,6 +25,9 @@ type AttendanceCell = {
   leaving?: string;
   latency?: number; // minutes
   present: boolean;
+  isFriday?: boolean;
+  isHoliday?: boolean;
+  holidayName?: string;
 };
 
 type AttendanceMap = {
@@ -59,9 +62,11 @@ export default function MonthReport() {
         const res = await fetch(
           `http://localhost:8000/allattendance/${emp.email}`
         );
+
         if (!res.ok) continue;
 
         const records = await res.json();
+        console.log('The record is :',records)
         map[emp.email] = {};
 
         records.forEach((r: any) => {
@@ -94,6 +99,9 @@ export default function MonthReport() {
               : undefined,
             latency: r.latency || 0,
             present: isPresent,
+            isFriday: r.isFriday || false,
+            isHoliday: r.isHoliday || false,
+            holidayName: r.HoldayName || r.HoldayName,
           };
         });
       }
@@ -211,6 +219,29 @@ export default function MonthReport() {
                       />
                     );
 
+                  // Check for Holiday first
+                  if (cell.isHoliday)
+                    return (
+                      <TableCell
+                        key={day}
+                        className="border border-gray-400 bg-yellow-200 dark:bg-yellow-900 text-center font-bold text-[9px] holiday-cell"
+                      >
+                        {cell.holidayName || "Holiday"}
+                      </TableCell>
+                    );
+
+                  // Check for Friday next
+                  if (cell.isFriday)
+                    return (
+                      <TableCell
+                        key={day}
+                        className="border border-gray-400 bg-yellow-200 dark:bg-yellow-900 text-center font-bold text-[9px] friday-cell"
+                      >
+                        Friday
+                      </TableCell>
+                    );
+
+                  // Check for Absent
                   if (!cell.present)
                     return (
                       <TableCell
@@ -221,6 +252,7 @@ export default function MonthReport() {
                       </TableCell>
                     );
 
+                  // Present
                   return (
                     <TableCell
                       key={day}
@@ -243,18 +275,15 @@ export default function MonthReport() {
       {/* ===== PRINT STYLES ===== */}
       <style jsx global>{`
         @media print {
-          /* 1. Hide everything on the page */
           body * {
             visibility: hidden;
           }
 
-          /* 2. Make the table container and its contents visible */
           #printable-table, 
           #printable-table * {
             visibility: visible;
           }
 
-          /* 3. Reset the position of the table to the top left */
           #printable-table {
             position: absolute;
             left: 0;
@@ -264,7 +293,6 @@ export default function MonthReport() {
             padding: 0;
           }
 
-          /* 4. Formatting adjustments for the table */
           table {
             border-spacing: 0;
             border-collapse: collapse !important;
@@ -273,12 +301,11 @@ export default function MonthReport() {
           }
 
           th, td {
-            border: 1px solid #000 !important; /* Force black borders for printing */
+            border: 1px solid #000 !important;
             padding: 2px !important;
             word-wrap: break-word;
           }
 
-          /* 5. Force background colors to print */
           .absent-cell {
             background-color: #fca5a5 !important;
             -webkit-print-color-adjust: exact !important;
@@ -291,13 +318,17 @@ export default function MonthReport() {
             print-color-adjust: exact !important;
           }
 
-          /* 6. Landscape mode is essential for 31 columns */
+          .friday-cell, .holiday-cell {
+            background-color: #fef08a !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           @page {
             size: landscape;
             margin: 10mm;
           }
 
-          /* 7. Extra safety: Hide UI components specifically */
           .print-hidden, .no-print {
             display: none !important;
           }

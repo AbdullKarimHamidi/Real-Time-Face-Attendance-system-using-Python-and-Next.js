@@ -106,7 +106,7 @@ const table = useReactTable({
     },
   },
   onGlobalFilterChange: setGlobalFilter,
-  globalFilterFn: globalSearch, // ✅ ADD THIS
+  globalFilterFn: globalSearch, 
   getCoreRowModel: getCoreRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getSortedRowModel: getSortedRowModel(),

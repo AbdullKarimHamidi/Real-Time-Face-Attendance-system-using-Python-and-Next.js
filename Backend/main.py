@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import cv2
 from insightface.app import FaceAnalysis
 from functions import All
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time,date,timedelta
 import threading
 import os
 import random
@@ -35,23 +35,25 @@ from urllib.parse import quote
 cameras = list(cameras_collection.find())
 full_address = []
 CAMERA_INDEX = {}
-for index, cam in enumerate(cameras):
-    cam_name = cam.get("camera_name")
-    username = cam.get("username")
-    password = cam.get("password")
-    ipaddress = cam.get("ipaddress")
-    port = cam.get("port", "554")
 
-    rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
-    full_address.append(rtsp_url)
-    CAMERA_INDEX[cam_name] = rtsp_url
+
+# for index, cam in enumerate(cameras):
+#     cam_name = cam.get("camera_name")
+#     username = cam.get("username")
+#     password = cam.get("password")
+#     ipaddress = cam.get("ipaddress")
+#     port = cam.get("port", "554")
+
+#     rtsp_url = f"rtsp://{username}:{password}@{ipaddress}:{port}/cam/realmonitor?channel=1&subtype=0"
+#     full_address.append(rtsp_url)
+#     CAMERA_INDEX[cam_name] = rtsp_url
 
 password = "pam@12345"
 # ================= CONFIG =================
-# CAMERA_INDEX = {"herat": f"rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1",
-#                  "kabul":f'rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1',
-#                   'mazar':0
-#                   }
+CAMERA_INDEX = {"herat": f"rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1",
+                 "kabul":f'rtsp://admin:pam%4012345@192.168.100.56:554/cam/realmonitor?channel=1&subtype=1',
+                  'mazar':0
+                  }
 
 
 IMAGE_FOLDER = "engineers_images"
@@ -168,6 +170,7 @@ def add_camera(
     username: str = Form(...),
     password: str = Form(...),
     ipaddress: str = Form(...),
+
 ):
    
     if not camname.strip():
@@ -200,53 +203,11 @@ def specify_time(start: str = Form(...), end: str = Form(...)):
     return {"message": "Insert time is created successfully"}
 
 
+# ================= route for getting Holidays =================
 
-# def getLatency(empemail: str):
-#     employee = list(db.attendance_collection.find(
-#         {'email': empemail},
-#         {'_id': 0, 'entrance_time': 1, 'leaving_time': 1}
-#     ))
-
-#     # Get scheduled work times
-#     worktime = start_end_time.find_one({}, sort=[("createdat", -1)])
-#     start_str = worktime['start'] if worktime else None
-#     end_str = worktime['end'] if worktime else None
-#     start_time = time(int(start_str), 0) if start_str else None
-#     end_time = time(int(end_str), 0) if end_str else None
-
-#     total_absent = timedelta(0)
-
-#     for record in employee:
-#         entrance_time = record.get('entrance_time')
-#         leaving_time = record.get('leaving_time')
-
-#         if not entrance_time or not leaving_time:
-#             continue
-
-#         entrance = max(entrance_time, datetime.combine(entrance_time.date(), start_time))
-#         leaving = min(leaving_time, datetime.combine(leaving_time.date(), end_time))
-
-#         if entrance >= leaving:
-#             day_absent = datetime.combine(entrance_time.date(), end_time) - datetime.combine(entrance_time.date(), start_time)
-#         else:
-#             # Late arrival
-#             late = entrance - datetime.combine(entrance_time.date(), start_time) if entrance_time.time() > start_time else timedelta(0)
-#             # Early leaving
-#             early_leave = datetime.combine(leaving_time.date(), end_time) - leaving if leaving_time.time() < end_time else timedelta(0)
-#             day_absent = late + early_leave
-
-#         total_absent += day_absent
-
-#     # Convert to hours and minutes
-#     hours = total_absent.seconds // 3600
-#     minutes = (total_absent.seconds % 3600) // 60
-
-#     return {"employee_email": empemail, "total_late_hours": hours, "total_late_minutes": minutes}
-    
 def takeAttendance(person_name: str, person_email: str):
     now = datetime.now()   
     today = now.strftime("%Y-%m-%d")
-    current_time = now.time()
     
     with attendance_lock:
   
@@ -273,6 +234,9 @@ def takeAttendance(person_name: str, person_email: str):
                 "present": False,
                 'workstarts':start_h,
                 'workends':end_h,
+                'isFriday':False,
+                "isHoliday":False,
+                'HoldayName':'',
                 "createdAt": today
             })
             
@@ -334,55 +298,10 @@ def takeAttendance(person_name: str, person_email: str):
 
             send_message(user_id=telegramID, message=message)
 
-# def getLatency(empemail: str):
-#     # Fetch all records for this employee
-#     records = list(db.attendance_collection.find({'email': empemail}))
-    
-#     total_latency_seconds = 0
-
-#     for record in records:
-#         entrance = record.get('entrance_time')
-#         leaving = record.get('leaving_time')
-        
-#         # Get the daily shift hours from your document
-#         # In your JSON: "workstarts": 7, "workends": 21
-#         shift_start_h = record.get('workstarts')
-#         shift_end_h = record.get('workends')
-
-#         # Skip if data is missing for that day
-#         if not all([entrance, leaving, shift_start_h, shift_end_h]):
-#             continue
-
-#         # Create datetime objects for the shift boundaries on THAT day
-#         day_start = datetime.combine(entrance.date(), time(int(shift_start_h), 0))
-#         day_end = datetime.combine(entrance.date(), time(int(shift_end_h), 0))
-
-#         day_loss = 0
-
-#         # 1. Late Arrival: Jack arrived at 11:58 but shift started at 07:00
-#         if entrance > day_start:
-#             arrival_delay = (entrance - day_start).total_seconds()
-#             day_loss += arrival_delay
-
-#         # 2. Early Departure: Jack left at 11:59 but shift ends at 21:00
-#         if leaving < day_end:
-#             early_departure = (day_end - leaving).total_seconds()
-#             day_loss += early_departure
-            
-#         total_latency_seconds += day_loss
-
-#     # Convert total accumulated seconds to Hours and Minutes
-#     hours = int(total_latency_seconds // 3600)
-#     minutes = int((total_latency_seconds % 3600) // 60)
-
-#     return {
-#         "employee_email": empemail,
-#         "total_late_hours": hours,
-#         "total_late_minutes": minutes
-#     }
 
 def upsence_attendance():
     todayname=datetime.now().strftime("%A")
+    timecheck=datetime.now().time()
     if todayname!='Friday':
         today=datetime.now().strftime('%Y-%m-%d')
         AllEngineers=list(eng_collection.find({},{'name':1,"email":1,"tid":1,"lastName":1}))
@@ -419,11 +338,119 @@ def upsence_attendance():
                         f"— *FarsRout ISP | HR Department*"
                         )
                          )
-    
+
+def PresentForFriday():
+    now = datetime.now()   
+    today = now.strftime("%Y-%m-%d")
+    Fday = datetime.now().strftime("%A")
+    fdate = datetime.now().strftime("%Y-%m-%d")
+    if Fday =='Friday':
+        AllEngineers=list(eng_collection.find({},{'name':1,"email":1,"tid":1,"lastName":1}))
+        today_attendance = db.attendance_collection.find(
+            {"date": today},
+            {"email": 1}
+        )
+        engemails={erf['email'] for erf in today_attendance}
+        worktime = start_end_time.find_one({}, sort=[("createdat", -1)])
+        start_time=worktime['start'] if worktime else None
+        end_time=worktime['end'] if worktime else None
+        for eng in AllEngineers:
+            if eng['email'] not in engemails:
+                db.attendance_collection.insert_one({
+                    'name':eng['name'],
+                    'email':eng['email'],
+                    "date":today,
+                    'entrance_time':None,
+                    'leaving_time':None,
+                    'present':False,
+                    'workstarts':start_time,
+                    'workends':end_time,
+                    'isFriday':True,
+                    "isHoliday":False,
+                    "createdAt":today
+                })
+def PresentForHoliday():
+    holiday = holidays_collection.find_one(
+        {},
+        sort=[("_id", -1)]
+    )
+    if not holiday:
+        return
+    start_date = datetime.strptime(
+        holiday["start_date"],
+        "%Y-%m-%d"
+    ).date()
+
+    end_date = datetime.strptime(
+        holiday["end_date"],
+        "%Y-%m-%d"
+    ).date()
+
+    today = date.today()
+    # Check whether today is inside the holiday period
+    is_holiday = start_date <= today <= end_date
+    if not is_holiday:
+        return
+    all_engineers = list(
+        eng_collection.find(
+            {},
+            {
+                "name": 1,
+                "email": 1,
+                "tid": 1,
+                "lastName": 1
+            }
+        )
+    )
+    start_of_day = datetime.combine(
+        today,
+        datetime.min.time()
+    )
+    end_of_day = start_of_day + timedelta(days=1)
+
+    today_attendance = db.attendance_collection.find(
+        {
+            "date": {
+                "$gte": start_of_day,
+                "$lt": end_of_day
+            }
+        },
+        {
+            "email": 1
+        }
+    )
+    eng_emails = {
+        employee["email"]
+        for employee in today_attendance
+    }
+    worktime = start_end_time.find_one(
+        {},
+        sort=[("createdat", -1)]
+    )
+    start_time = worktime["start"] if worktime else None
+    end_time = worktime["end"] if worktime else None
+    for eng in all_engineers:
+        if eng["email"] not in eng_emails:
+            db.attendance_collection.insert_one({
+                "name": eng["name"],
+                "email": eng["email"],
+                "date": start_of_day,
+                "entrance_time": None,
+                "leaving_time": None,
+                "present": False,
+                "workstarts": start_time,
+                "workends": end_time,
+                "isFriday": False,
+                "isHoliday": True,
+                "HoldayName": holiday["name"],
+                "createdAt": datetime.now()
+            })
+
 # =================function for kepping start for ever the telgram bot=============
 @app.on_event("startup")
 def startup_event():
     start_telegram_bot()
+
 
 
 def generate_frames(camera_name: str):
@@ -643,8 +670,6 @@ def get_all_attendance(eng_email: str):
             leaving_time = leaving_time.replace(tzinfo=None)
 
         if entrance_time and leaving_time:
-
-            # Shift boundaries
             work_start_dt = datetime.combine(
                 entrance_time.date(), time(int(shift_start_h), 0)
             )
@@ -664,13 +689,10 @@ def get_all_attendance(eng_email: str):
                 early_leave = (work_end_dt - leaving_time).total_seconds()
 
             latency_minutes = int((late_arrival + early_leave) // 60)
-
         # Clean Mongo ID
         atd["_id"] = str(atd["_id"])
-
         # Add latency
         atd["latency"] = latency_minutes
-
         # Convert datetime to ISO format (IMPORTANT for frontend)
         atd["entrance_time"] = entrance_time.isoformat() if entrance_time else None
         atd["leaving_time"] = leaving_time.isoformat() if leaving_time else None
@@ -762,27 +784,21 @@ def camera_worker(camera_name: str, index: int):
         if not ret:
             continue
         frame_count += 1
-        
-        # Optional: Skip heavy processing on certain frames to maintain high streaming FPS
         if frame_count % PROCESS_EVERY_N_FRAMES != 0:
             with frame_locks[camera_name]:
                 camera_frames[camera_name] = frame.copy()
             continue
 
-        # 1️⃣ FAST CHECK: Detect faces first with optimized detection size
-        # det_size=(320, 320) provides a great balance of speed and accuracy for surveillance
+       
         faces = face_app.get(frame, max_num=4)
 
-        # 2️⃣ IF NO FACES: Skip all heavy recognition/database logic and just show the stream
         if not faces:
             with recognized_lock:
                 continue
-                # recognized_per_camera[camera_name] = {"name": "No face", "image": ""}
+              
             with frame_locks[camera_name]:
                 camera_frames[camera_name] = frame.copy()
             continue
-
-        # 3️⃣ IF FACES EXIST: Process embeddings and recognition only when needed
         for face in faces:
             x1, y1, x2, y2 = map(int, face.bbox)
             emb = face.embedding.reshape(1, -1)
@@ -792,11 +808,8 @@ def camera_worker(camera_name: str, index: int):
             telegram_id = None
 
             if face_embeddings.shape[0] > 0:
-                # Vectorized cosine similarity
                 sims = cosine_similarity(emb, face_embeddings)
                 idx = np.argmax(sims)
-                
-                # Increased threshold slightly to 0.55 for better accuracy/fewer false positives
                 if sims[0][idx] > 0.55:
                     person_email = face_emails[idx]
                     full_name = face_names[idx] 
@@ -819,8 +832,6 @@ def camera_worker(camera_name: str, index: int):
                             "name": person_name,
                             "image": f"/engineer_image/{person_name}"
                         }
-
-            # Drawing Overlays
             COLOR_MATCHED = (238, 211, 34)  
             COLOR_UNKNOWN = (80, 70, 244)  
             text_color = COLOR_MATCHED if display_name != "Unknown" else COLOR_UNKNOWN
@@ -843,8 +854,14 @@ def camera_worker(camera_name: str, index: int):
             camera_frames[camera_name] = frame.copy()
 
         current_time = datetime.now().time()
-        if dt_time(17, 0) <= current_time <= dt_time(18, 0):
+        if dt_time(18, 0) <= current_time <= dt_time(19, 0):
             upsence_attendance()
+        today_name=datetime.now().strftime("%A")
+        if today_name == 'Friday':
+            if dt_time(10, 0) <= current_time <= dt_time(12, 0):
+                PresentForFriday()
+        if dt_time(8, 0) <= current_time <= dt_time(10, 0):
+            PresentForHoliday()
 
     cap.release()
 @app.get('/countall')
