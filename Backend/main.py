@@ -795,7 +795,6 @@ def camera_worker(camera_name: str, index: int):
         if not faces:
             with recognized_lock:
                 continue
-              
             with frame_locks[camera_name]:
                 camera_frames[camera_name] = frame.copy()
             continue
